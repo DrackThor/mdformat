@@ -16,14 +16,14 @@ New rules plug in through a single standardized interface.
 
 ## Rules
 
-| Rule                   | What it does                                                                           |
-| ---------------------- | -------------------------------------------------------------------------------------- |
-| `trailing-whitespace`  | Trims trailing spaces/tabs; preserves Markdown hard line breaks (two trailing spaces). |
-| `atx-headings`         | Normalizes `#` spacing and strips optional closing `#` sequences.                      |
-| `list-markers`         | Normalizes unordered bullets to a single marker (`-` by default).                      |
-| `semantic-line-breaks` | Puts each sentence (and optionally each clause) on its own line ([sembr.org]).         |
-| `table-width`          | Pads GFM table cells to the column's widest content plus a padding (default 1).        |
-| `blank-lines`          | Collapses excess blank lines and ensures blanks around headings and code fences.       |
+| Rule                    | What it does                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| `trailing-whitespace`   | Trims trailing spaces/tabs; preserves Markdown hard line breaks (two trailing spaces).  |
+| `atx-headings`          | Normalizes `#` spacing and strips optional closing `#` sequences.                       |
+| `list-markers`          | Normalizes unordered bullets to a single marker (`-` by default).                       |
+| `semantic-line-breaks`  | Puts each sentence (and optionally each clause) on its own line ([sembr.org]).          |
+| `table-width`           | Pads GFM table cells to the column's widest content plus a padding (default 1).         |
+| `blank-lines`           | Collapses excess blank lines and ensures blanks around headings and code fences.        |
 
 Verbatim spans — fenced code blocks, inline code, front matter, and link/image destinations — are never altered.
 
@@ -79,7 +79,8 @@ mdformat --check docs/
 
 ## Configuration
 
-Configuration is layered. Each layer overrides the one before it:
+Configuration is layered.
+Each layer overrides the one before it:
 
 1. Built-in defaults.
 2. User config: `$XDG_CONFIG_HOME/mdformat/config.yaml` (falls back to `~/.config/mdformat/config.yaml`).
@@ -108,12 +109,12 @@ options:
 
 ## Flags
 
-| Flag              | Short | Description                                                          |
-| ----------------- | ----- | ------------------------------------------------------------------- |
-| `--config <file>` | `-c`  | Explicit config file (highest precedence).                          |
-| `--recursive`     | `-r`  | Recurse into directories.                                            |
-| `--check`         |       | Report files needing formatting without writing; exit non-zero.     |
-| `--version`       |       | Print the mdformat version and exit.                                |
+| Flag               | Short  | Description                                                      |
+| ------------------ | ------ | ---------------------------------------------------------------- |
+| `--config <file>`  | `-c`   | Explicit config file (highest precedence).                       |
+| `--recursive`      | `-r`   | Recurse into directories.                                        |
+| `--check`          |        | Report files needing formatting without writing; exit non-zero.  |
+| `--version`        |        | Print the mdformat version and exit.                             |
 
 ## Adding a rule
 
