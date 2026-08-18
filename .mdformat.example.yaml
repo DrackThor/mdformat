@@ -1,0 +1,35 @@
+# Example mdformat configuration.
+#
+# Place this file as ./.mdformat.yaml in a project (highest precedence besides
+# an explicit --config), or as $XDG_CONFIG_HOME/mdformat/config.yaml for
+# user-wide defaults (falls back to ~/.config/mdformat/config.yaml).
+#
+# The "rules" list defines BOTH which rules run and the order they run in.
+# Remove a rule from the list to disable it.
+
+rules:
+  - trailing-whitespace
+  - atx-headings
+  - list-markers
+  - semantic-line-breaks
+  - table-width
+  - blank-lines
+
+options:
+  semantic-line-breaks:
+    # Where to insert breaks. Default: only at sentence ends.
+    # Available: sentence (. ! ?), colon (:), semicolon (;), em-dash (—), comma (,)
+    break-on:
+      - sentence
+
+  table-width:
+    # Pad each cell to the column's widest cell content plus this many spaces.
+    padding: 1
+
+  list-markers:
+    # Unordered bullet character to normalize to: "-", "*", or "+".
+    marker: "-"
+
+  blank-lines:
+    # Maximum consecutive blank lines allowed between blocks (1 = one blank line).
+    max-blank: 1

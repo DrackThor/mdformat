@@ -1,0 +1,9 @@
+{
+  "plugins": {
+    "changelog-generator": {
+      "options": {
+        "emojis": "true"
+      }
+    }
+  }
+}

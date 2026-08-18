@@ -1,0 +1,57 @@
+version: 2
+project_name: mdformat
+
+# maintainers:
+#   - "Daniel Drack <daniel@drackthor.me>"
+# license: "MIT"
+# description: |
+#   A command-line tool written in Go that formats Markdown files in place
+#   using a configurable, ordered set of formatting rules.
+
+builds:
+  - id: mdformat
+    main: .
+    binary: mdformat
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/drackthor/mdformat/internal/version.BuildVersion={{ .Tag }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+  split: false
+  disable: false
+
+sboms:
+  - documents:
+      - "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.cdx.sbom"
+    cmd: syft
+    args: [ "$artifact", "-o", "cyclonedx-json=$document" ]
+    artifacts: binary
+    # disable: false
+
+source:
+  enabled: true
+  name_template: "{{ .ProjectName }}-{{ .Version }}"
+  format: "tar.gz"
+  prefix_template: "{{ .ProjectName }}-{{ .Version }}/"
+
+archives:
+  - id: mdformat
+    formats: ["tar.gz"]
+    meta: false
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    strip_binary_directory: false
+    allow_different_binary_count: true
