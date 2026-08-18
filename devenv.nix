@@ -6,6 +6,7 @@
 
   # https://devenv.sh/packages/
   packages = [
+    pkgs.gnumake
     pkgs.golangci-lint
     pkgs.goreleaser
   ];
@@ -55,31 +56,35 @@
     end-of-file-fixer.enable = true;
     fix-byte-order-marker.enable = true;
 
+    # Run each Go hook through `devenv shell` so the nix-provided toolchain
+    # (go, golangci-lint, make) is on PATH even when the hook is invoked from a
+    # shell where direnv/devenv is not active. Commands delegate to the Makefile
+    # so the hooks and `make` stay in sync.
     fmt = {
       enable = true;
       name = "go fmt";
-      entry = "make fmt";
+      entry = "devenv shell -- make fmt";
       language = "system";
       pass_filenames = false;
     };
     vet = {
       enable = true;
       name = "go vet";
-      entry = "make vet";
+      entry = "devenv shell -- make vet";
       language = "system";
       pass_filenames = false;
     };
     lint = {
       enable = true;
       name = "go lint";
-      entry = "make lint";
+      entry = "devenv shell -- make lint";
       language = "system";
       pass_filenames = false;
     };
     test = {
       enable = true;
       name = "go test";
-      entry = "make test";
+      entry = "devenv shell -- make test";
       language = "system";
       pass_filenames = false;
     };
