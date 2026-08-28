@@ -9,6 +9,7 @@
 
 rules:
   - trailing-whitespace
+  - hard-tabs
   - setext-headings
   - atx-headings
   - list-markers
@@ -27,6 +28,11 @@ options:
   table-width:
     # Pad each cell to the column's widest cell content plus this many spaces.
     padding: 1
+
+  hard-tabs:
+    # Tab stop width. A tab expands to the spaces that reach the next stop, so
+    # what a tab becomes depends on the column it starts at.
+    width: 4
 
   list-markers:
     # Unordered bullet character to normalize to: "-", "*", or "+".

@@ -123,7 +123,12 @@ with `style: keep`:
 Implementation: track list blocks (leading indent + `orderedMarkerLen` already exists in `sembr.go`).
 Reuse `listMarkerLen`/`orderedMarkerLen`. Reset numbering per list (blank line or dedent ends a list).
 
-### 3. `hard-tabs` → spaces [rule]
+### 3. `hard-tabs` → spaces [rule] — DONE
+
+Implemented in `internal/format/tabs.go`, runs right after `trailing-whitespace`
+so every later rule sees spaces instead of tabs.
+A tab expands to the next tab stop rather than to a fixed number of spaces,
+which is how Markdown itself reads tabs.
 
 markdownlint MD010. Expand leading hard tabs to spaces (configurable width, default 4).
 Must NOT touch tabs inside fenced/inline code.
@@ -398,7 +403,7 @@ ______________________________________________________________________
 
 ## Suggested order of attack
 
-1. Tier 1 (all six; #1 and #2 done) — pure line transforms, reuse existing helpers, high user value.
+1. Tier 1 (all six; #1, #2 and #3 done) — pure line transforms, reuse existing helpers, high user value.
 2. #16 TOML config + #13 end-of-line + #14 diff/stdin — cheap CLI parity wins.
 3. Build the shared inline tokenizer, then Tier 2 (#7–#11).
 4. #17 safety guard once several inline rules exist (highest risk of meaning changes).

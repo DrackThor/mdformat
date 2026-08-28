@@ -2,8 +2,7 @@
 
 A command-line tool written in Go that formats Markdown files in place using a configurable, ordered set of formatting rules.
 
-Rules follow the naming and configuration conventions of established formatters like Prettier and Black:
-each rule has a kebab-case name, can be enabled or disabled individually, and runs in a configured order.
+Rules follow the naming and configuration conventions of established formatters like Prettier and Black: each rule has a kebab-case name, can be enabled or disabled individually, and runs in a configured order.
 New rules plug in through a single standardized interface.
 
 ## Features
@@ -16,16 +15,17 @@ New rules plug in through a single standardized interface.
 
 ## Rules
 
-| Rule                    | What it does                                                                            |
-| ----------------------- | --------------------------------------------------------------------------------------- |
-| `trailing-whitespace`   | Trims trailing spaces/tabs; preserves Markdown hard line breaks (two trailing spaces).  |
-| `setext-headings`       | Rewrites Setext (underlined) headings as ATX, joining a hard-wrapped heading into one line. |
-| `atx-headings`          | Normalizes `#` spacing and strips optional closing `#` sequences.                       |
-| `list-markers`          | Normalizes unordered bullets to a single marker (`-` by default).                       |
-| `ordered-list-numbering` | Renumbers ordered lists consecutively, keeping the number each list starts at (`increment` or `keep`). |
-| `semantic-line-breaks`  | Unwraps hard-wrapped paragraphs, then puts each sentence (and optionally each clause) on its own line ([sembr.org]). |
-| `table-width`           | Pads GFM table cells to the column's widest content plus a padding (default 1).         |
-| `blank-lines`           | Collapses excess blank lines and ensures blanks around headings and code fences.        |
+| Rule                      | What it does                                                                                                          |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `trailing-whitespace`     | Trims trailing spaces/tabs; preserves Markdown hard line breaks (two trailing spaces).                                |
+| `hard-tabs`               | Expands hard tabs to the next tab stop (width 4 by default); tabs in code keep their tab.                             |
+| `setext-headings`         | Rewrites Setext (underlined) headings as ATX, joining a hard-wrapped heading into one line.                           |
+| `atx-headings`            | Normalizes `#` spacing and strips optional closing `#` sequences.                                                     |
+| `list-markers`            | Normalizes unordered bullets to a single marker (`-` by default).                                                     |
+| `ordered-list-numbering`  | Renumbers ordered lists consecutively, keeping the number each list starts at (`increment` or `keep`).                |
+| `semantic-line-breaks`    | Unwraps hard-wrapped paragraphs, then puts each sentence (and optionally each clause) on its own line ([sembr.org]).  |
+| `table-width`             | Pads GFM table cells to the column's widest content plus a padding (default 1).                                       |
+| `blank-lines`             | Collapses excess blank lines and ensures blanks around headings and code fences.                                      |
 
 Verbatim spans — fenced code blocks, inline code, front matter, and link/image destinations — are never altered.
 
@@ -96,6 +96,7 @@ See [.mdformat.example.yaml](.mdformat.example.yaml) for all options.
 ```yaml
 rules:
   - trailing-whitespace
+  - hard-tabs
   - setext-headings
   - atx-headings
   - list-markers
@@ -133,24 +134,15 @@ type Rule interface {
 }
 ```
 
-Every rule ships with a golden fixture pair named after it —
-`test-cases/inputs/<rule-name>.md` and `test-cases/expected/<rule-name>.md`.
-Write the input by hand so it covers the rule and its edge cases,
-then generate the expected output and read it before committing:
-
-```bash
-go run ./scripts/gen_expected.go
-```
-
-Fixtures are formatted with the full default rule set and are also asserted to be idempotent,
-so they catch interactions between rules as well as the rule under test.
+Every rule ships with a golden fixture: an input under `test-cases/inputs/`, the expected output under `test-cases/expected/`, and a case pairing them in `test-cases/test-config.yaml`.
 
 ## Development
 
 ```bash
-make build   # build the binary
-make test    # go test -race ./...
-make lint    # golangci-lint
+make build             # build the binary
+make test              # go test -race ./...
+make test-integration  # golden-file tests in test-cases/ only
+make lint              # golangci-lint
 ```
 
 Golden fixtures live in `test-cases/`, paired up by `test-cases/test-config.yaml`:
@@ -165,10 +157,8 @@ cases:
           style: keep
 ```
 
-Each case formats `inputs/<input>` and compares the result to `expected/<expected>`,
-then formats it once more to assert the output is idempotent.
+Each case formats `inputs/<input>` and compares the result to `expected/<expected>`, then formats it once more to assert the output is idempotent.
 The optional `config` lets one input have a golden per option value.
 
 Write the expected files by hand.
-They state what the formatter *should* do, so generating them by running the formatter would
-only ever confirm what it already does.
+They state what the formatter *should* do, so generating them by running the formatter would only ever confirm what it already does.

@@ -36,6 +36,7 @@ func Register(name string, f Factory) {
 // config does not specify a "rules" list.
 var DefaultRuleOrder = []string{
 	nameTrailingWhitespace,
+	nameHardTabs,
 	nameSetextHeadings,
 	nameATXHeadings,
 	nameListMarkers,
