@@ -84,21 +84,24 @@ outside `codeMask`, and where the underline is not a thematic break / table deli
 Emit `# `/`## ` + text, drop the underline.
 Note ordering: must run before `blank-lines` so the surround pass sees a real heading.
 
-### 2. `ordered-list-numbering` [rule]
+### 2. `ordered-list-numbering` [rule] — DONE
+
+Implemented in `internal/format/ordered.go`, runs after `list-markers` in `DefaultRuleOrder`.
+The number a list starts at is preserved (a list written as `3.` still renders as 3);
+only the items after the first are rewritten.
 
 mdformat renumbers ordered lists and defaults to the non-incrementing `1.` style,
 which minimizes diffs when items are inserted (markdownlint MD029).
 
 Option `style`:
 
-- `one` (recommended default): every item `1.`
 - `increment`: `1.`, `2.`, `3.`, …
 - `keep`: leave as-is
 
 ```markdown
 1. first
-1. second
-1. third
+3. second
+5. third
 ```
 
 with `style: increment`:
@@ -107,6 +110,14 @@ with `style: increment`:
 1. first
 2. second
 3. third
+```
+
+with `style: keep`:
+
+```markdown
+1. first
+3. second
+5. third
 ```
 
 Implementation: track list blocks (leading indent + `orderedMarkerLen` already exists in `sembr.go`).
@@ -387,7 +398,7 @@ ______________________________________________________________________
 
 ## Suggested order of attack
 
-1. Tier 1 (all six; #1 done) — pure line transforms, reuse existing helpers, high user value.
+1. Tier 1 (all six; #1 and #2 done) — pure line transforms, reuse existing helpers, high user value.
 2. #16 TOML config + #13 end-of-line + #14 diff/stdin — cheap CLI parity wins.
 3. Build the shared inline tokenizer, then Tier 2 (#7–#11).
 4. #17 safety guard once several inline rules exist (highest risk of meaning changes).

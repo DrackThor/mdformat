@@ -30,15 +30,16 @@ mdformat/
 │   │   ├── trailing.go          # Rule: trailing whitespace
 │   │   ├── headings.go          # Rule: ATX heading normalization
 │   │   ├── lists.go             # Rule: list marker normalization
+│   │   ├── ordered.go           # Rule: ordered list renumbering
+│   │   ├── setext.go            # Rule: Setext -> ATX heading conversion
 │   │   └── format_test.go       # Unit tests for the engine and rules
 │   └── version/
 │       └── version.go           # Version string (ldflags-injectable)
 ├── test-cases/                  # Golden-file integration tests
-│   ├── inputs/                  # Sample Markdown documents, one <rule-name>.md per rule
-│   ├── expected/                # Canonical formatted outputs, same filenames
-│   └── integration_test.go      # Compares formatted inputs to golden files
-├── scripts/
-│   └── gen_expected.go          # Regenerate expected golden fixtures
+│   ├── inputs/                  # Sample Markdown documents
+│   ├── expected/                # Hand-written expected outputs
+│   ├── test-config.yaml         # input/expected pairs, with optional per-case config
+│   └── integration_test.go      # Runs every case in test-config.yaml
 ├── .mdformat.example.yaml       # Example config for rules and options
 ├── .golangci.yml                # Lint configuration
 ├── .goreleaser.yaml             # Release build configuration
@@ -57,9 +58,11 @@ mdformat/
 4. Read per-rule options from the passed `*viper.Viper` (may be nil — default then).
 5. Skip verbatim spans using `codeMask(lines)`.
 6. Add a table-driven test case in `format_test.go`.
-7. Add a golden fixture pair named after the rule: `test-cases/inputs/<rule-name>.md` and `test-cases/expected/<rule-name>.md`.
-   Every rule must have one.
-   Write the input by hand so it exercises the rule and its edge cases (including spans the rule must leave alone), then generate the golden with `go run ./scripts/gen_expected.go` and read it — the generator records current behavior, it does not verify it.
+7. Add a golden fixture: `test-cases/inputs/<rule-name>.md`, the expected output in
+   `test-cases/expected/`, and a case pairing them in `test-cases/test-config.yaml`.
+   For a rule with options, add a case per value with the option under the case's `config`.
+   Write expected files by hand — never by running the formatter, which would only
+   confirm current behavior instead of stating intended behavior.
 
 ## Go Best Practices
 
@@ -99,8 +102,6 @@ mdformat/
 3. Prefer table-driven tests for behavior matrices.
 4. Cover each rule and the end-to-end engine behavior.
 5. Keep integration fixtures in `test-cases/` representative of real Markdown documents.
-6. Every rule in `DefaultRuleOrder` has a fixture pair named after it (`test-cases/inputs/<rule-name>.md` and `test-cases/expected/<rule-name>.md`).
-   Fixtures run through the full default rule set, so they also catch rule interactions.
 
 Example:
 

@@ -22,6 +22,7 @@ New rules plug in through a single standardized interface.
 | `setext-headings`       | Rewrites Setext (underlined) headings as ATX, joining a hard-wrapped heading into one line. |
 | `atx-headings`          | Normalizes `#` spacing and strips optional closing `#` sequences.                       |
 | `list-markers`          | Normalizes unordered bullets to a single marker (`-` by default).                       |
+| `ordered-list-numbering` | Renumbers ordered lists consecutively, keeping the number each list starts at (`increment` or `keep`). |
 | `semantic-line-breaks`  | Unwraps hard-wrapped paragraphs, then puts each sentence (and optionally each clause) on its own line ([sembr.org]). |
 | `table-width`           | Pads GFM table cells to the column's widest content plus a padding (default 1).         |
 | `blank-lines`           | Collapses excess blank lines and ensures blanks around headings and code fences.        |
@@ -98,6 +99,7 @@ rules:
   - setext-headings
   - atx-headings
   - list-markers
+  - ordered-list-numbering
   - semantic-line-breaks
   - table-width
   - blank-lines
@@ -105,6 +107,8 @@ rules:
 options:
   semantic-line-breaks:
     break-on: [sentence] # add: colon, semicolon, em-dash, comma
+  ordered-list-numbering:
+    style: increment # or: keep
   table-width:
     padding: 1
 ```
@@ -149,8 +153,22 @@ make test    # go test -race ./...
 make lint    # golangci-lint
 ```
 
-Regenerate golden test fixtures after changing rule behavior:
+Golden fixtures live in `test-cases/`, paired up by `test-cases/test-config.yaml`:
 
-```bash
-go run ./scripts/gen_expected.go
+```yaml
+cases:
+  - input: ordered-list-numbering.md
+    expected: ordered-list-numbering-keep.md
+    config: # optional, same shape as .mdformat.yaml
+      options:
+        ordered-list-numbering:
+          style: keep
 ```
+
+Each case formats `inputs/<input>` and compares the result to `expected/<expected>`,
+then formats it once more to assert the output is idempotent.
+The optional `config` lets one input have a golden per option value.
+
+Write the expected files by hand.
+They state what the formatter *should* do, so generating them by running the formatter would
+only ever confirm what it already does.

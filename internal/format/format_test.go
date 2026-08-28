@@ -56,6 +56,31 @@ func TestEngine_EndToEnd(t *testing.T) {
 			want:  "- a\n- b\n- c\n",
 		},
 		{
+			name:  "ordered list is renumbered consecutively",
+			input: "1. first\n3. second\n5. third\n",
+			want:  "1. first\n2. second\n3. third\n",
+		},
+		{
+			name:  "ordered list keeps the number it starts at",
+			input: "3. first\n9. second\n",
+			want:  "3. first\n4. second\n",
+		},
+		{
+			name:  "nested ordered lists are numbered independently",
+			input: "1. outer\n   4. inner\n   9. inner two\n7. outer two\n",
+			want:  "1. outer\n   4. inner\n   5. inner two\n2. outer two\n",
+		},
+		{
+			name:  "a top-level paragraph ends the ordered list",
+			input: "1. a\n7. b\n\npara\n\n5. c\n9. d\n",
+			want:  "1. a\n2. b\n\npara\n\n5. c\n6. d\n",
+		},
+		{
+			name:  "ordered markers inside a fence are untouched",
+			input: "```\n1. one\n9. nine\n```\n",
+			want:  "```\n1. one\n9. nine\n```\n",
+		},
+		{
 			name:  "atx heading spacing and closing hashes",
 			input: "##   Title  ##\n",
 			want:  "## Title\n",
@@ -173,5 +198,34 @@ func TestSemBr_ConfigurableBreakOn(t *testing.T) {
 	want := "Setup:\ninstall;\nrun. Keep.\n"
 	if string(out) != want {
 		t.Errorf("\n got: %q\nwant: %q", out, want)
+	}
+}
+
+func TestOrderedListNumbering_Styles(t *testing.T) {
+	const in = "3. first\n7. second\n8. third\n"
+	tests := []struct {
+		style string
+		want  string
+	}{
+		{style: "increment", want: "3. first\n4. second\n5. third\n"},
+		{style: "keep", want: in},
+	}
+	for _, tt := range tests {
+		t.Run(tt.style, func(t *testing.T) {
+			v := viper.New()
+			v.Set("rules", []string{"ordered-list-numbering"})
+			v.Set("options.ordered-list-numbering.style", tt.style)
+			e, err := Build(v)
+			if err != nil {
+				t.Fatalf("Build: %v", err)
+			}
+			out, err := e.Format([]byte(in))
+			if err != nil {
+				t.Fatalf("Format: %v", err)
+			}
+			if string(out) != tt.want {
+				t.Errorf("\n got: %q\nwant: %q", out, tt.want)
+			}
+		})
 	}
 }

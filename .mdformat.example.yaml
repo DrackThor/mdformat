@@ -12,6 +12,7 @@ rules:
   - setext-headings
   - atx-headings
   - list-markers
+  - ordered-list-numbering
   - semantic-line-breaks
   - table-width
   - blank-lines
@@ -30,6 +31,13 @@ options:
   list-markers:
     # Unordered bullet character to normalize to: "-", "*", or "+".
     marker: "-"
+
+  ordered-list-numbering:
+    # How to number ordered list items. The number a list starts at is always
+    # kept; only the items after it are rewritten.
+    # increment (default) the starting number counts up: 1. 2. 3.
+    # keep      leave every marker as written
+    style: increment
 
   blank-lines:
     # Maximum consecutive blank lines allowed between blocks (1 = one blank line).

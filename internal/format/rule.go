@@ -39,6 +39,7 @@ var DefaultRuleOrder = []string{
 	nameSetextHeadings,
 	nameATXHeadings,
 	nameListMarkers,
+	nameOrderedListNumbering,
 	nameSemBr,
 	nameTableWidth,
 	nameBlankLines,
