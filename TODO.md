@@ -192,7 +192,22 @@ Two parts:
 
 `scan.go`'s `fenceMarker` already parses both markers — extend the scanner to report the block so the rule can rewrite the edges.
 
-### 6. `blank-lines` — surround lists (MD032) [core]
+### 6. `blank-lines` — surround lists (MD032) [core] — DONE
+
+Implemented in `internal/format/whitespace.go` (`listEdges`), used by `surroundBlocks`.
+
+Blank lines are only inserted where the render does not change:
+
+- Before a list that already starts a list, i.e. one that can interrupt a paragraph
+  (a bullet with content, or an ordered item starting at `1.`).
+  `text` + `2. a` stays prose, because a blank line there would turn it into a list.
+- After a list, before a block that already closes it (a block quote or thematic break).
+  Headings and fences close a list too, but they are surrounded on their own.
+
+Never before a lazy continuation: the text written directly under an item belongs to
+that item, so splitting it off with a blank line would change the render rather than
+tidy it. `semantic-line-breaks` folds such a line into its item instead, which makes
+the same point visible.
 
 Extend the existing `blank-lines` rule to also ensure a blank line before and after
 list blocks, not just headings and fences.
@@ -412,7 +427,7 @@ ______________________________________________________________________
 
 ## Suggested order of attack
 
-1. Tier 1 (all six; #1–#4 done, #5 marker part done) — pure line transforms, reuse existing helpers, high user value.
+1. Tier 1 (#1–#4 and #6 done, #5 marker part done) — pure line transforms, reuse existing helpers, high user value.
 2. #16 TOML config + #13 end-of-line + #14 diff/stdin — cheap CLI parity wins.
 3. Build the shared inline tokenizer, then Tier 2 (#7–#11).
 4. #17 safety guard once several inline rules exist (highest risk of meaning changes).

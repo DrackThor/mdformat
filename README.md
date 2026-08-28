@@ -26,7 +26,7 @@ New rules plug in through a single standardized interface.
 | `ordered-list-numbering`  | Renumbers ordered lists consecutively, keeping the number each list starts at (`increment` or `keep`).                |
 | `semantic-line-breaks`    | Unwraps hard-wrapped paragraphs, then puts each sentence (and optionally each clause) on its own line ([sembr.org]).  |
 | `table-width`             | Pads GFM table cells to the column's widest content plus a padding (default 1).                                       |
-| `blank-lines`             | Collapses excess blank lines and ensures blanks around headings and code fences.                                      |
+| `blank-lines`             | Collapses excess blank lines and ensures blanks around headings, code fences, and lists.                              |
 
 Verbatim spans — fenced code blocks, inline code, front matter, and link/image destinations — are never altered.
 
