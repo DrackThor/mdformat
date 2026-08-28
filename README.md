@@ -21,7 +21,7 @@ New rules plug in through a single standardized interface.
 | `trailing-whitespace`   | Trims trailing spaces/tabs; preserves Markdown hard line breaks (two trailing spaces).  |
 | `atx-headings`          | Normalizes `#` spacing and strips optional closing `#` sequences.                       |
 | `list-markers`          | Normalizes unordered bullets to a single marker (`-` by default).                       |
-| `semantic-line-breaks`  | Puts each sentence (and optionally each clause) on its own line ([sembr.org]).          |
+| `semantic-line-breaks`  | Unwraps hard-wrapped paragraphs, then puts each sentence (and optionally each clause) on its own line ([sembr.org]). |
 | `table-width`           | Pads GFM table cells to the column's widest content plus a padding (default 1).         |
 | `blank-lines`           | Collapses excess blank lines and ensures blanks around headings and code fences.        |
 
