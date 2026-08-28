@@ -121,6 +121,11 @@ func TestEngine_EndToEnd(t *testing.T) {
 			want:  "before the break  \nafter it\n",
 		},
 		{
+			name:  "hard line break survives mid-paragraph stitching",
+			input: "wrapped line one\nend of the break  \nafter it\n",
+			want:  "wrapped line one end of the break  \nafter it\n",
+		},
+		{
 			name:  "indented code block is left verbatim",
 			input: "text\n\n    code. line one\n    code. line two\n",
 			want:  "text\n\n    code. line one\n    code. line two\n",

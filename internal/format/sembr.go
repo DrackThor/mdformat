@@ -92,13 +92,20 @@ func (r semBr) Apply(lines []string) ([]string, error) {
 // not consume.
 func (r semBr) unwrap(lines []string, mask []bool, i int) (joined string, next int) {
 	joined = lines[i]
-	next = i + 1
-	for ; next < len(lines); next++ {
-		if mask[next] || !r.continues(joined, lines[next]) {
+	// prev is the last source line folded in, not the accumulation: joining
+	// strips a line's trailing whitespace, so only the original still shows
+	// whether it ended in a hard line break.
+	prev := lines[i]
+	for next = i + 1; next < len(lines); next++ {
+		if mask[next] || !r.continues(prev, lines[next]) {
 			break
 		}
 		content, _ := splitPrefix(lines[next])
 		joined = strings.TrimRight(joined, " \t") + " " + strings.TrimSpace(content)
+		if hardLineBreak(lines[next]) {
+			joined += "  " // the fold ends here; keep the break visible
+		}
+		prev = lines[next]
 	}
 	return joined, next
 }
