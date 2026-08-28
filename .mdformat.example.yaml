@@ -9,6 +9,7 @@
 
 rules:
   - trailing-whitespace
+  - setext-headings
   - atx-headings
   - list-markers
   - semantic-line-breaks

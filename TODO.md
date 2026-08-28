@@ -56,7 +56,9 @@ ______________________________________________________________________
 
 ## Tier 1 — high value, low risk
 
-### 1. `setext-headings` → convert to ATX [rule]
+### 1. `setext-headings` → convert to ATX [rule] — DONE
+
+Implemented in `internal/format/setext.go`, runs before `atx-headings` in `DefaultRuleOrder`.
 
 mdformat converts Setext (underline) headings to ATX for consistency (markdownlint MD003).
 We currently only normalize existing ATX headings.
@@ -385,7 +387,7 @@ ______________________________________________________________________
 
 ## Suggested order of attack
 
-1. Tier 1 (all six) — pure line transforms, reuse existing helpers, high user value.
+1. Tier 1 (all six; #1 done) — pure line transforms, reuse existing helpers, high user value.
 2. #16 TOML config + #13 end-of-line + #14 diff/stdin — cheap CLI parity wins.
 3. Build the shared inline tokenizer, then Tier 2 (#7–#11).
 4. #17 safety guard once several inline rules exist (highest risk of meaning changes).

@@ -19,6 +19,7 @@ New rules plug in through a single standardized interface.
 | Rule                    | What it does                                                                            |
 | ----------------------- | --------------------------------------------------------------------------------------- |
 | `trailing-whitespace`   | Trims trailing spaces/tabs; preserves Markdown hard line breaks (two trailing spaces).  |
+| `setext-headings`       | Rewrites Setext (underlined) headings as ATX, joining a hard-wrapped heading into one line. |
 | `atx-headings`          | Normalizes `#` spacing and strips optional closing `#` sequences.                       |
 | `list-markers`          | Normalizes unordered bullets to a single marker (`-` by default).                       |
 | `semantic-line-breaks`  | Unwraps hard-wrapped paragraphs, then puts each sentence (and optionally each clause) on its own line ([sembr.org]). |
@@ -94,6 +95,7 @@ See [.mdformat.example.yaml](.mdformat.example.yaml) for all options.
 ```yaml
 rules:
   - trailing-whitespace
+  - setext-headings
   - atx-headings
   - list-markers
   - semantic-line-breaks
