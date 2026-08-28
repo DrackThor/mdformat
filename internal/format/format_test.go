@@ -102,9 +102,9 @@ func TestEngine_EndToEnd(t *testing.T) {
 			want:  "para\n\n---\n\nmore\n",
 		},
 		{
-			name:  "underline after a list item is not a heading",
+			name:  "underline after a list item is a thematic break, not a heading",
 			input: "- item\n---\n",
-			want:  "- item\n---\n",
+			want:  "- item\n\n---\n",
 		},
 		{
 			name:  "setext underline inside a fence is untouched",
@@ -408,5 +408,71 @@ func TestCodeFenceStyle_InvalidMarker(t *testing.T) {
 	v.Set("options.code-fence-style.marker", "'''")
 	if _, err := Build(v); err == nil {
 		t.Fatal("Build: want an error for an unsupported marker")
+	}
+}
+
+func TestBlankLines_SurroundLists(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "list after a paragraph",
+			input: "text\n- a\n- b\n",
+			want:  "text\n\n- a\n- b\n",
+		},
+		{
+			name:  "ordered list starting at one",
+			input: "text\n1. a\n",
+			want:  "text\n\n1. a\n",
+		},
+		{
+			name:  "ordered list not starting at one stays prose",
+			input: "text\n2. a\n",
+			want:  "text\n2. a\n",
+		},
+		{
+			name:  "tight list keeps its items together",
+			input: "- a\n- b\n- c\n",
+			want:  "- a\n- b\n- c\n",
+		},
+		{
+			name:  "nested items are not separated",
+			input: "text\n- a\n  - b\n- c\n",
+			want:  "text\n\n- a\n  - b\n- c\n",
+		},
+		{
+			name:  "block quote closes the list",
+			input: "- a\n- b\n> quoted\n",
+			want:  "- a\n- b\n\n> quoted\n",
+		},
+		{
+			name:  "thematic break closes the list",
+			input: "- a\n- b\n***\n",
+			want:  "- a\n- b\n\n***\n",
+		},
+		{
+			name:  "list already surrounded is untouched",
+			input: "text\n\n- a\n\nmore\n",
+			want:  "text\n\n- a\n\nmore\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := viper.New()
+			v.Set("rules", []string{"blank-lines"})
+			e, err := Build(v)
+			if err != nil {
+				t.Fatalf("Build: %v", err)
+			}
+			out, err := e.Format([]byte(tt.input))
+			if err != nil {
+				t.Fatalf("Format: %v", err)
+			}
+			if string(out) != tt.want {
+				t.Errorf("\n got: %q\nwant: %q", out, tt.want)
+			}
+		})
 	}
 }
