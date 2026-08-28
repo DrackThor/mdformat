@@ -1,6 +1,7 @@
 package format
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -116,6 +117,26 @@ func TestEngine_EndToEnd(t *testing.T) {
 			want:  "```\nkeep. this.  as-is\n```\n",
 		},
 		{
+			name:  "hard tab expands to the next tab stop",
+			input: "-\tItem with a tab\n",
+			want:  "-   Item with a tab\n",
+		},
+		{
+			name:  "leading tab expands to a full indent",
+			input: "\tindented by a tab\n",
+			want:  "    indented by a tab\n",
+		},
+		{
+			name:  "tab inside an inline code span is kept",
+			input: "Inline `a\tb` stays.\n",
+			want:  "Inline `a\tb` stays.\n",
+		},
+		{
+			name:  "tab inside a fence is kept",
+			input: "```\ncol\tcol\n```\n",
+			want:  "```\ncol\tcol\n```\n",
+		},
+		{
 			name:  "inline code protects punctuation",
 			input: "Call `a. b` then stop. Go.\n",
 			want:  "Call `a. b` then stop.\nGo.\n",
@@ -215,6 +236,38 @@ func TestOrderedListNumbering_Styles(t *testing.T) {
 			v := viper.New()
 			v.Set("rules", []string{"ordered-list-numbering"})
 			v.Set("options.ordered-list-numbering.style", tt.style)
+			e, err := Build(v)
+			if err != nil {
+				t.Fatalf("Build: %v", err)
+			}
+			out, err := e.Format([]byte(in))
+			if err != nil {
+				t.Fatalf("Format: %v", err)
+			}
+			if string(out) != tt.want {
+				t.Errorf("\n got: %q\nwant: %q", out, tt.want)
+			}
+		})
+	}
+}
+
+func TestHardTabs_Width(t *testing.T) {
+	// A tab advances to the next tab stop, so the spaces it becomes depend on
+	// the column it starts at, not only on the configured width.
+	const in = "ab\tc\n"
+	tests := []struct {
+		width int
+		want  string
+	}{
+		{width: 4, want: "ab  c\n"},
+		{width: 2, want: "ab  c\n"},
+		{width: 8, want: "ab      c\n"},
+	}
+	for _, tt := range tests {
+		t.Run(strconv.Itoa(tt.width), func(t *testing.T) {
+			v := viper.New()
+			v.Set("rules", []string{"hard-tabs"})
+			v.Set("options.hard-tabs.width", tt.width)
 			e, err := Build(v)
 			if err != nil {
 				t.Fatalf("Build: %v", err)

@@ -17,6 +17,9 @@ cases:
   - input: setext.md
     expected: setext.md
 
+  - input: hard-tabs.md
+    expected: hard-tabs.md
+
   - input: ordered-list-numbering.md
     expected: ordered-list-numbering-increment.md
     config:

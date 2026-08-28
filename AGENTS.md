@@ -30,6 +30,7 @@ mdformat/
 │   │   ├── trailing.go          # Rule: trailing whitespace
 │   │   ├── headings.go          # Rule: ATX heading normalization
 │   │   ├── lists.go             # Rule: list marker normalization
+│   │   ├── tabs.go              # Rule: hard tab expansion
 │   │   ├── ordered.go           # Rule: ordered list renumbering
 │   │   ├── setext.go            # Rule: Setext -> ATX heading conversion
 │   │   └── format_test.go       # Unit tests for the engine and rules
