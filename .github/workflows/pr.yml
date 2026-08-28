@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "**"
+      - "!main" # main is covered by release.yml
     tags-ignore:
       - "**"
 
