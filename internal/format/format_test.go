@@ -282,3 +282,42 @@ func TestHardTabs_Width(t *testing.T) {
 		})
 	}
 }
+
+func TestATXHeadings_TrailingPunctuation(t *testing.T) {
+	tests := []struct {
+		name  string
+		punct any // nil = leave the option unset (default set)
+		input string
+		want  string
+	}{
+		{name: "default strips colon", input: "## Overview:\n", want: "## Overview\n"},
+		{name: "default strips a run", input: "## Ship it!?\n", want: "## Ship it\n"},
+		{name: "punctuation inside is kept", input: "## Ratio 1:2 rule\n", want: "## Ratio 1:2 rule\n"},
+		{name: "escaped mark is kept", input: `## Done\.` + "\n", want: `## Done\.` + "\n"},
+		{name: "closing hashes then punctuation", input: "## Overview: ##\n", want: "## Overview\n"},
+		{name: "heading of only punctuation empties", input: "## ...\n", want: "##\n"},
+		{name: "custom set", punct: ":", input: "## Keep it!\n", want: "## Keep it!\n"},
+		{name: "custom set strips", punct: ":", input: "## Keep it:\n", want: "## Keep it\n"},
+		{name: "empty set disables", punct: "", input: "## Overview:\n", want: "## Overview:\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := viper.New()
+			v.Set("rules", []string{"atx-headings"})
+			if tt.punct != nil {
+				v.Set("options.atx-headings.strip-trailing-punctuation", tt.punct)
+			}
+			e, err := Build(v)
+			if err != nil {
+				t.Fatalf("Build: %v", err)
+			}
+			out, err := e.Format([]byte(tt.input))
+			if err != nil {
+				t.Fatalf("Format: %v", err)
+			}
+			if string(out) != tt.want {
+				t.Errorf("\n got: %q\nwant: %q", out, tt.want)
+			}
+		})
+	}
+}
