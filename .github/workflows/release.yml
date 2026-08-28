@@ -49,6 +49,9 @@ jobs:
       - name: Test
         run: go test -v ./...
 
+      - name: Integration tests
+        run: go test -race -v ./test-cases/...
+
   tag:
     name: "[tag] go-semantic-release"
     runs-on: ubuntu-latest

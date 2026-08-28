@@ -52,6 +52,9 @@ jobs:
       - name: Test
         run: go test -v ./...
 
+      - name: Integration tests
+        run: go test -race -v ./test-cases/...
+
   build:
     name: "[build] go build"
     runs-on: ubuntu-latest

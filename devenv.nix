@@ -88,6 +88,13 @@
       language = "system";
       pass_filenames = false;
     };
+    test-integration = {
+      enable = true;
+      name = "golden-file integration tests";
+      entry = "devenv shell -- make test-integration";
+      language = "system";
+      pass_filenames = false;
+    };
   };
 
   # See full reference at https://devenv.sh/reference/options/

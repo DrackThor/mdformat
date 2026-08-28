@@ -215,14 +215,15 @@ defer cancel()
 
 1. Run formatting: `go fmt ./...`.
 2. Run vet: `go vet ./...`.
-3. Run tests: `go test ./...`.
-4. Run lint: `golangci-lint run ./...`.
-5. If fixtures changed, regenerate expected outputs: `go run ./scripts/gen_expected.go`.
+3. Run tests: `go test ./...` (or `make test`).
+4. Run the golden-file integration tests: `make test-integration`.
+5. Run lint: `golangci-lint run ./...`.
+6. If a rule's behavior changed, update the hand-written fixtures in `test-cases/expected/`.
 
 ### CI/CD
 
-- PR workflow (`.github/workflows/pr.yml`) runs lint, tests, and build.
-- Release workflow (`.github/workflows/release.yml`) runs lint + tests, then semantic release with GoReleaser on pushes to `main`.
+- PR workflow (`.github/workflows/pr.yml`) runs lint, unit tests, golden-file integration tests, and build.
+- Release workflow (`.github/workflows/release.yml`) runs the same lint and test jobs, then semantic release with GoReleaser on pushes to `main`.
 - Pre-commit hooks enforce conventional commit format and key Go checks when installed.
 
 ## When Adding Features

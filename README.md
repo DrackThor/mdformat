@@ -133,24 +133,17 @@ type Rule interface {
 }
 ```
 
-Every rule ships with a golden fixture pair named after it —
-`test-cases/inputs/<rule-name>.md` and `test-cases/expected/<rule-name>.md`.
-Write the input by hand so it covers the rule and its edge cases,
-then generate the expected output and read it before committing:
-
-```bash
-go run ./scripts/gen_expected.go
-```
-
-Fixtures are formatted with the full default rule set and are also asserted to be idempotent,
-so they catch interactions between rules as well as the rule under test.
+Every rule ships with a golden fixture: an input under `test-cases/inputs/`,
+the expected output under `test-cases/expected/`,
+and a case pairing them in `test-cases/test-config.yaml`.
 
 ## Development
 
 ```bash
-make build   # build the binary
-make test    # go test -race ./...
-make lint    # golangci-lint
+make build             # build the binary
+make test              # go test -race ./...
+make test-integration  # golden-file tests in test-cases/ only
+make lint              # golangci-lint
 ```
 
 Golden fixtures live in `test-cases/`, paired up by `test-cases/test-config.yaml`:
