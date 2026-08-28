@@ -75,6 +75,31 @@ func TestEngine_EndToEnd(t *testing.T) {
 			input: "- First. Second.\n",
 			want:  "- First.\n  Second.\n",
 		},
+		{
+			name:  "hard-wrapped paragraph is stitched",
+			input: "Zero dependencies, works in browser and\nNode.js.\n",
+			want:  "Zero dependencies, works in browser and Node.js.\n",
+		},
+		{
+			name:  "wrapped blockquote is stitched",
+			input: "> as easy as writing an email, by converting it\n> automatically into HTML.\n",
+			want:  "> as easy as writing an email, by converting it automatically into HTML.\n",
+		},
+		{
+			name:  "wrapped list item is stitched, items stay apart",
+			input: "- item one that is\n  wrapped here\n- item two\n",
+			want:  "- item one that is wrapped here\n- item two\n",
+		},
+		{
+			name:  "hard line break is not stitched",
+			input: "before the break  \nafter it\n",
+			want:  "before the break  \nafter it\n",
+		},
+		{
+			name:  "indented code block is left verbatim",
+			input: "text\n\n    code. line one\n    code. line two\n",
+			want:  "text\n\n    code. line one\n    code. line two\n",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

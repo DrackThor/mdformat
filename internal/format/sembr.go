@@ -17,10 +17,13 @@ const (
 func init() { Register(nameSemBr, newSemBr) }
 
 // semBr applies semantic line breaks (https://sembr.org): it puts each sentence
-// (and, optionally, each independent clause) on its own line. Breaks are
-// inserted after configured punctuation, never inside inline code, links, or
-// verbatim blocks, and continuation lines keep the block prefix (list marker
-// indentation, blockquote markers) so rendering is unchanged.
+// (and, optionally, each independent clause) on its own line. A paragraph is
+// first unwrapped — hard-wrapped lines are stitched back into one logical line,
+// so fixed-width formatted documents are reflowed rather than broken further —
+// and then split again at the configured punctuation. Breaks are never inserted
+// inside inline code, links, or verbatim blocks, and continuation lines keep the
+// block prefix (list marker indentation, blockquote markers) so rendering is
+// unchanged.
 //
 // The default only breaks at sentence boundaries (. ! ?). Additional break
 // points are enabled via the "break-on" option:
@@ -62,24 +65,83 @@ func (semBr) Name() string { return nameSemBr }
 func (r semBr) Apply(lines []string) ([]string, error) {
 	mask := codeMask(lines)
 	out := make([]string, 0, len(lines))
-	for i, l := range lines {
-		if mask[i] || !r.isProse(l) {
-			out = append(out, l)
+	for i := 0; i < len(lines); {
+		if mask[i] || isIndented(lines[i]) || !r.isProse(lines[i]) {
+			out = append(out, lines[i])
+			i++
 			continue
 		}
-		content, contPrefix := splitPrefix(l)
-		firstPrefix := l[:len(l)-len(content)]
-		chunks := r.splitSentences(content)
-		if len(chunks) <= 1 {
-			out = append(out, l)
-			continue
-		}
-		out = append(out, firstPrefix+chunks[0])
-		for _, c := range chunks[1:] {
+		joined, next := r.unwrap(lines, mask, i)
+		i = next
+
+		content, contPrefix := splitPrefix(joined)
+		firstPrefix := joined[:len(joined)-len(content)]
+		for k, c := range r.splitSentences(content) {
+			if k == 0 {
+				out = append(out, firstPrefix+c)
+				continue
+			}
 			out = append(out, contPrefix+c)
 		}
 	}
 	return out, nil
+}
+
+// unwrap folds the wrapped continuation lines that follow lines[i] into a single
+// logical line and returns it together with the index of the first line it did
+// not consume.
+func (r semBr) unwrap(lines []string, mask []bool, i int) (joined string, next int) {
+	joined = lines[i]
+	next = i + 1
+	for ; next < len(lines); next++ {
+		if mask[next] || !r.continues(joined, lines[next]) {
+			break
+		}
+		content, _ := splitPrefix(lines[next])
+		joined = strings.TrimRight(joined, " \t") + " " + strings.TrimSpace(content)
+	}
+	return joined, next
+}
+
+// continues reports whether next is a wrapped continuation of the logical line
+// prev and may therefore be folded into it. A hard line break, a change of
+// blockquote depth, a new list item, and indented (verbatim) content all end the
+// logical line.
+func (r semBr) continues(prev, next string) bool {
+	if hardLineBreak(prev) || !r.isProse(next) {
+		return false
+	}
+	if quoteDepth(prev) != quoteDepth(next) {
+		return false
+	}
+	if isIndented(prev) || isIndented(next) {
+		return false
+	}
+	_, _, contentStart := scanPrefix(next)
+	return listMarkerLen(next[contentStart:]) == 0
+}
+
+// hardLineBreak reports whether a line ends in a Markdown hard line break, which
+// must survive unwrapping.
+func hardLineBreak(line string) bool {
+	return strings.HasSuffix(line, "  ") || strings.HasSuffix(line, "\\")
+}
+
+// quoteDepth returns the number of blockquote markers a line opens with.
+func quoteDepth(line string) int {
+	quoteEnd, _, _ := scanPrefix(line)
+	return strings.Count(line[:quoteEnd], ">")
+}
+
+// isIndented reports whether a line's content is indented far enough to be an
+// indented code block rather than wrapped prose.
+//
+// ponytail: indentation alone, no block tracking. Costs the stitching of
+// paragraphs nested four or more spaces deep inside a list; upgrade to a real
+// indented-code mask in [codeMask] if that shows up.
+func isIndented(line string) bool {
+	_, indent, contentStart := scanPrefix(line)
+	return indent >= indentedCodeWidth && listMarkerLen(line[contentStart:]) == 0
 }
 
 // isProse reports whether a line's content is ordinary prose eligible for
@@ -109,25 +171,45 @@ func (semBr) isProse(l string) bool {
 // continuation lines: blockquote markers are kept so text stays in the quote,
 // and a list marker becomes equal-width spaces so text aligns under the item.
 func splitPrefix(line string) (content, contPrefix string) {
-	i := 0
-	var b strings.Builder
-	for i < len(line) && (line[i] == ' ' || line[i] == '\t') {
-		b.WriteByte(line[i])
-		i++
-	}
-	for i < len(line) && line[i] == '>' {
-		b.WriteByte('>')
-		i++
-		for i < len(line) && (line[i] == ' ' || line[i] == '\t') {
-			b.WriteByte(line[i])
-			i++
-		}
-	}
+	_, _, i := scanPrefix(line)
+	contPrefix = line[:i]
 	if m := listMarkerLen(line[i:]); m > 0 {
-		b.WriteString(strings.Repeat(" ", m))
+		contPrefix += strings.Repeat(" ", m)
 		i += m
 	}
-	return line[i:], b.String()
+	return line[i:], contPrefix
+}
+
+// indentedCodeWidth is the indentation at which Markdown treats content as an
+// indented code block.
+const indentedCodeWidth = 4
+
+// scanPrefix measures a line's leading indentation and blockquote markers.
+// quoteEnd is the index just past the last blockquote marker (0 when there is
+// none), indent is the width of the whitespace between those markers and the
+// content (a tab counts as four columns), and contentStart is the index of the
+// first content byte.
+func scanPrefix(line string) (quoteEnd, indent, contentStart int) {
+	i := 0
+	for {
+		spaceStart := i
+		for i < len(line) && (line[i] == ' ' || line[i] == '\t') {
+			i++
+		}
+		if i < len(line) && line[i] == '>' {
+			i++
+			quoteEnd = i
+			continue
+		}
+		for k := spaceStart; k < i; k++ {
+			if line[k] == '\t' {
+				indent += indentedCodeWidth
+			} else {
+				indent++
+			}
+		}
+		return quoteEnd, indent, i
+	}
 }
 
 // listMarkerLen returns the byte length of a leading list marker in s
