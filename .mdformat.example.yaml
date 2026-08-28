@@ -10,6 +10,7 @@
 rules:
   - trailing-whitespace
   - hard-tabs
+  - code-fence-style
   - setext-headings
   - atx-headings
   - list-markers
@@ -39,6 +40,12 @@ options:
     # Set to "" to keep heading punctuation as written. A mark kept literal by a
     # backslash escape ("## Done\.") is never stripped.
     strip-trailing-punctuation: ".,;:!?"
+
+  code-fence-style:
+    # Fence character every fenced code block is rewritten with: "`" or "~".
+    # Fences are three characters long unless their content holds a longer run
+    # of the marker, which would close the block early.
+    marker: "`"
 
   list-markers:
     # Unordered bullet character to normalize to: "-", "*", or "+".

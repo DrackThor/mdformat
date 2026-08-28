@@ -321,3 +321,92 @@ func TestATXHeadings_TrailingPunctuation(t *testing.T) {
 		})
 	}
 }
+
+func TestCodeFenceStyle(t *testing.T) {
+	tests := []struct {
+		name   string
+		marker any // nil = leave the option unset (backticks)
+		input  string
+		want   string
+	}{
+		{
+			name:  "tilde fence becomes backticks",
+			input: "~~~go\ncode\n~~~\n",
+			want:  "```go\ncode\n```\n",
+		},
+		{
+			name:  "over-long fence shrinks",
+			input: "`````\ncode\n`````\n",
+			want:  "```\ncode\n```\n",
+		},
+		{
+			name:  "widens past a run in the content",
+			input: "~~~\n```\nnested\n```\n~~~\n",
+			want:  "````\n```\nnested\n```\n````\n",
+		},
+		{
+			name:  "unclosed fence still normalized",
+			input: "~~~\ncode\n",
+			want:  "```\ncode\n",
+		},
+		{
+			name:  "info string with a backtick keeps tildes",
+			input: "~~~ `x`\ncode\n~~~\n",
+			want:  "~~~ `x`\ncode\n~~~\n",
+		},
+		{
+			name:  "front matter is not a fence",
+			input: "---\ntitle: x\n---\n\n~~~\ncode\n~~~\n",
+			want:  "---\ntitle: x\n---\n\n```\ncode\n```\n",
+		},
+		{
+			name:   "tilde marker",
+			marker: "~",
+			input:  "```go\ncode\n```\n",
+			want:   "~~~go\ncode\n~~~\n",
+		},
+		{
+			name:   "tilde marker widens past a tilde run",
+			marker: "~",
+			input:  "```\n~~~~\n```\n",
+			want:   "~~~~~\n~~~~\n~~~~~\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := viper.New()
+			v.Set("rules", []string{"code-fence-style"})
+			if tt.marker != nil {
+				v.Set("options.code-fence-style.marker", tt.marker)
+			}
+			e, err := Build(v)
+			if err != nil {
+				t.Fatalf("Build: %v", err)
+			}
+			out, err := e.Format([]byte(tt.input))
+			if err != nil {
+				t.Fatalf("Format: %v", err)
+			}
+			if string(out) != tt.want {
+				t.Errorf("\n got: %q\nwant: %q", out, tt.want)
+			}
+			// The rewritten fences must survive a second pass unchanged.
+			twice, err := e.Format(out)
+			if err != nil {
+				t.Fatalf("Format (2nd pass): %v", err)
+			}
+			if string(twice) != string(out) {
+				t.Errorf("not idempotent\n first: %q\nsecond: %q", out, twice)
+			}
+		})
+	}
+}
+
+func TestCodeFenceStyle_InvalidMarker(t *testing.T) {
+	v := viper.New()
+	v.Set("rules", []string{"code-fence-style"})
+	v.Set("options.code-fence-style.marker", "'''")
+	if _, err := Build(v); err == nil {
+		t.Fatal("Build: want an error for an unsupported marker")
+	}
+}

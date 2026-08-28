@@ -23,6 +23,16 @@ cases:
   - input: hard-tabs.md
     expected: hard-tabs.md
 
+  - input: code-fence-style.md
+    expected: code-fence-style.md
+
+  - input: code-fence-style.md
+    expected: code-fence-style-tilde.md
+    config:
+      options:
+        code-fence-style:
+          marker: "~"
+
   - input: ordered-list-numbering.md
     expected: ordered-list-numbering-increment.md
     config:

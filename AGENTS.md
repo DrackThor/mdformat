@@ -2,6 +2,22 @@
 
 This document provides guidelines for AI agents working on this Go project.
 
+## Git Policy
+
+**Never run git operations.**
+The maintainer drives the entire git workflow themselves.
+
+Forbidden, without exception:
+
+- `git add`, `git commit`, `git stash`
+- `git checkout`, `git switch`, `git branch`, `git merge`, `git rebase`, `git reset`
+- `git push`, `git pull`, `git fetch`
+- `gh pr create` or any other command that opens, updates, or merges a pull request
+
+Leave finished work uncommitted in the working tree and report which files changed.
+Do not offer to commit, branch, or open a pull request, and do not undo earlier commits with git.
+Branching, staging, committing, and pull requests are the maintainer's decisions.
+
 ## Project Snapshot
 
 - CLI binary name: `mdformat`.
@@ -212,7 +228,7 @@ defer cancel()
 
 ## Workflow Integration
 
-### Before Committing
+### Before Handing Off Changes
 
 1. Run formatting: `go fmt ./...`.
 2. Run vet: `go vet ./...`.

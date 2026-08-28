@@ -37,6 +37,7 @@ func Register(name string, f Factory) {
 var DefaultRuleOrder = []string{
 	nameTrailingWhitespace,
 	nameHardTabs,
+	nameCodeFenceStyle,
 	nameSetextHeadings,
 	nameATXHeadings,
 	nameListMarkers,

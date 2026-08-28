@@ -19,6 +19,7 @@ New rules plug in through a single standardized interface.
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `trailing-whitespace`     | Trims trailing spaces/tabs; preserves Markdown hard line breaks (two trailing spaces).                                |
 | `hard-tabs`               | Expands hard tabs to the next tab stop (width 4 by default); tabs in code keep their tab.                             |
+| `code-fence-style`        | Rewrites fenced code blocks with one marker (backticks by default) and the shortest valid fence length.               |
 | `setext-headings`         | Rewrites Setext (underlined) headings as ATX, joining a hard-wrapped heading into one line.                           |
 | `atx-headings`            | Normalizes `#` spacing, strips optional closing `#` sequences and trailing punctuation (`.,;:!?`).                    |
 | `list-markers`            | Normalizes unordered bullets to a single marker (`-` by default).                                                     |
@@ -97,6 +98,7 @@ See [.mdformat.example.yaml](.mdformat.example.yaml) for all options.
 rules:
   - trailing-whitespace
   - hard-tabs
+  - code-fence-style
   - setext-headings
   - atx-headings
   - list-markers
@@ -110,6 +112,8 @@ options:
     break-on: [sentence] # add: colon, semicolon, em-dash, comma
   atx-headings:
     strip-trailing-punctuation: ".,;:!?" # "" keeps heading punctuation
+  code-fence-style:
+    marker: "`" # or: ~
   ordered-list-numbering:
     style: increment # or: keep
   table-width:
