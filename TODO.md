@@ -166,7 +166,13 @@ becomes
 Implementation: small extension; could fold into `atx-headings` as an option
 `strip-trailing-punctuation: ".,;:!?"` rather than a separate rule.
 
-### 5. `code-fence-style` [rule]
+### 5. `code-fence-style` [rule] — DONE (marker part)
+
+Implemented in `internal/format/fences.go`, runs after `hard-tabs` in `DefaultRuleOrder`.
+`scan.go` now reports blocks via `fenceBlocks`, which `codeMask` also builds on.
+Option `marker` ("`" default, or "~"); fences are three characters long unless
+their content holds a longer run of the marker.
+The indented → fenced part (MD046) is still open.
 
 markdownlint MD048 + MD046 (fenced over indented).
 Normalize all fences to one marker (default backticks) and normalize fence length.
@@ -406,7 +412,7 @@ ______________________________________________________________________
 
 ## Suggested order of attack
 
-1. Tier 1 (all six; #1, #2 and #3 done) — pure line transforms, reuse existing helpers, high user value.
+1. Tier 1 (all six; #1–#4 done, #5 marker part done) — pure line transforms, reuse existing helpers, high user value.
 2. #16 TOML config + #13 end-of-line + #14 diff/stdin — cheap CLI parity wins.
 3. Build the shared inline tokenizer, then Tier 2 (#7–#11).
 4. #17 safety guard once several inline rules exist (highest risk of meaning changes).
