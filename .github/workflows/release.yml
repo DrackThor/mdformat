@@ -67,7 +67,9 @@ jobs:
           go-version-file: go.mod
 
       - name: Run go-semantic release
-        uses: go-semantic-release/action@2e9dc4247a6004f8377781bef4cb9dad273a741f # v1.24.1
+        run: |
+          go install github.com/go-semantic-release/semantic-release/v2/cmd/semantic-release@v2.31.0
+          semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

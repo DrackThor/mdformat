@@ -61,6 +61,31 @@ func TestEngine_EndToEnd(t *testing.T) {
 			want:  "## Title\n",
 		},
 		{
+			name:  "setext headings become atx",
+			input: "Title\n=====\n\nSubtitle\n--------\n",
+			want:  "# Title\n\n## Subtitle\n",
+		},
+		{
+			name:  "wrapped setext heading is joined",
+			input: "A long title that\nwraps over lines\n===\n",
+			want:  "# A long title that wraps over lines\n",
+		},
+		{
+			name:  "thematic break after a blank line stays a break",
+			input: "para\n\n---\n\nmore\n",
+			want:  "para\n\n---\n\nmore\n",
+		},
+		{
+			name:  "underline after a list item is not a heading",
+			input: "- item\n---\n",
+			want:  "- item\n---\n",
+		},
+		{
+			name:  "setext underline inside a fence is untouched",
+			input: "```\nTitle\n=====\n```\n",
+			want:  "```\nTitle\n=====\n```\n",
+		},
+		{
 			name:  "fenced code untouched",
 			input: "```\nkeep. this.  as-is\n```\n",
 			want:  "```\nkeep. this.  as-is\n```\n",
