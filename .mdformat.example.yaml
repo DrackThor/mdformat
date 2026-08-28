@@ -34,6 +34,12 @@ options:
     # what a tab becomes depends on the column it starts at.
     width: 4
 
+  atx-headings:
+    # Trailing punctuation stripped from heading text (markdownlint MD026).
+    # Set to "" to keep heading punctuation as written. A mark kept literal by a
+    # backslash escape ("## Done\.") is never stripped.
+    strip-trailing-punctuation: ".,;:!?"
+
   list-markers:
     # Unordered bullet character to normalize to: "-", "*", or "+".
     marker: "-"

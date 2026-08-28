@@ -17,6 +17,9 @@ cases:
   - input: setext.md
     expected: setext.md
 
+  - input: atx-headings.md
+    expected: atx-headings.md
+
   - input: hard-tabs.md
     expected: hard-tabs.md
 

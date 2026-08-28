@@ -146,9 +146,12 @@ becomes
 Implementation: replace `\t` outside `codeMask` and outside inline-code spans
 (reuse `inlineProtected` from `sembr.go`).
 
-### 4. `heading-trailing-punctuation` [rule]
+### 4. `heading-trailing-punctuation` [rule] — DONE
 
 markdownlint MD026. Strip trailing `.,;:!?` from heading text (configurable punctuation set).
+
+Landed as the `atx-headings` option `strip-trailing-punctuation` (default `".,;:!?"`,
+empty string disables) rather than a separate rule.
 
 ```markdown
 ## Overview:
