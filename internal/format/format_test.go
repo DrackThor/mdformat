@@ -1,6 +1,7 @@
 package format
 
 import (
+	"slices"
 	"strconv"
 	"testing"
 
@@ -566,5 +567,239 @@ func TestEngine_FormatTrace_UnchangedRulesAbsent(t *testing.T) {
 	}
 	if len(trace) != 0 {
 		t.Errorf("trace = %+v, want it empty", trace)
+	}
+}
+
+func TestDiffLines(t *testing.T) {
+	tests := []struct {
+		name          string
+		before, after []string
+		wantLines     []int
+		wantFrom      int
+		wantTo        int
+	}{
+		{
+			name:   "identical",
+			before: []string{"a", "b"},
+			after:  []string{"a", "b"},
+		},
+		{
+			name:      "same length, one line rewritten",
+			before:    []string{"a ", "b"},
+			after:     []string{"a", "b"},
+			wantLines: []int{1},
+		},
+		{
+			name:      "same length, several lines rewritten",
+			before:    []string{"a ", "b", "c "},
+			after:     []string{"a", "b", "c"},
+			wantLines: []int{1, 3},
+		},
+		{
+			// The removed line leaves nothing to point at, so the range
+			// collapses onto the line that now sits at the seam.
+			name:     "line removed",
+			before:   []string{"a", "b", "c"},
+			after:    []string{"a", "c"},
+			wantFrom: 2,
+			wantTo:   2,
+		},
+		{
+			name:     "line inserted",
+			before:   []string{"a", "c"},
+			after:    []string{"a", "b", "c"},
+			wantFrom: 2,
+			wantTo:   2,
+		},
+		{
+			name:     "block replaced by a longer one",
+			before:   []string{"a", "x", "d"},
+			after:    []string{"a", "b", "c", "d"},
+			wantFrom: 2,
+			wantTo:   3,
+		},
+		{
+			name:     "appended at the end",
+			before:   []string{"a"},
+			after:    []string{"a", "b"},
+			wantFrom: 2,
+			wantTo:   2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lines, from, to := diffLines(tt.before, tt.after)
+			if !slices.Equal(lines, tt.wantLines) {
+				t.Errorf("lines = %v, want %v", lines, tt.wantLines)
+			}
+			if from != tt.wantFrom || to != tt.wantTo {
+				t.Errorf("range = %d-%d, want %d-%d", from, to, tt.wantFrom, tt.wantTo)
+			}
+		})
+	}
+}
+
+func TestQuoteDepth(t *testing.T) {
+	tests := []struct {
+		line string
+		want int
+	}{
+		{"text", 0},
+		{"> quoted", 1},
+		{">> quoted", 2},
+		{"> > quoted", 2},
+		{"  > quoted", 1},
+		{">", 1},
+		{"", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.line, func(t *testing.T) {
+			if got := quoteDepth(tt.line); got != tt.want {
+				t.Errorf("quoteDepth(%q) = %d, want %d", tt.line, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsProse(t *testing.T) {
+	tests := []struct {
+		line string
+		want bool
+	}{
+		{"plain prose", true},
+		{"- item text", true}, // the marker is prefix; the text is prose
+		{"1. item text", true},
+		{"> quoted prose", true},
+		{"    code", true}, // the prefix is stripped, so callers pair this
+		{"", false},        // with isIndented to keep code out
+		{"# heading", false},
+		{"| a | b |", false},
+		{"---", false},
+		{"```go", false},
+		{"<div>", false},
+		{"===", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.line, func(t *testing.T) {
+			if got := isProse(tt.line); got != tt.want {
+				t.Errorf("isProse(%q) = %v, want %v", tt.line, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSetextLevel(t *testing.T) {
+	tests := []struct {
+		line string
+		want int
+	}{
+		{"===", 1},
+		{"=", 1},
+		{"---", 2},
+		{"-", 2},
+		{"  --  ", 2}, // trailing whitespace is ignored
+		{"    ===", 0},
+		{"=-=", 0},
+		{"== x", 0},
+		{"", 0},
+		{"text", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.line, func(t *testing.T) {
+			if got := setextLevel(tt.line); got != tt.want {
+				t.Errorf("setextLevel(%q) = %d, want %d", tt.line, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsParagraphLine(t *testing.T) {
+	tests := []struct {
+		line string
+		want bool
+	}{
+		{"paragraph text", true},
+		{"> quoted", false}, // the underline below sits outside the quote
+		{"# heading", false},
+		{"- item", false},
+		{"| a | b |", false},
+		{"```", false},
+		{"---", false},
+		{"    code", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.line, func(t *testing.T) {
+			if got := isParagraphLine(tt.line); got != tt.want {
+				t.Errorf("isParagraphLine(%q) = %v, want %v", tt.line, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEndsList(t *testing.T) {
+	tests := []struct {
+		line string
+		want bool
+	}{
+		{"---", true},
+		{"***", true},
+		{"> quote", true},
+		{"    ---", false}, // indented: still inside the item
+		{"    > quote", false},
+		{"lazy continuation", false},
+		{"- next item", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.line, func(t *testing.T) {
+			if got := endsList(tt.line); got != tt.want {
+				t.Errorf("endsList(%q) = %v, want %v", tt.line, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsHeadingLine(t *testing.T) {
+	tests := []struct {
+		name   string
+		line   string
+		masked bool
+		want   bool
+	}{
+		{"heading", "# Title", false, true},
+		{"deep heading", "### Title", false, true},
+		{"masked heading", "# Title", true, false},
+		{"quoted heading", "> # Title", false, false},
+		{"setext underline", "===", false, false},
+		{"prose", "text", false, false},
+		{"blank", "", false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isHeadingLine(tt.line, tt.masked); got != tt.want {
+				t.Errorf("isHeadingLine(%q, %v) = %v, want %v",
+					tt.line, tt.masked, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSemBr_CodeSpanWithInteriorBackticks(t *testing.T) {
+	v := viper.New()
+	v.Set("rules", []string{"semantic-line-breaks"})
+	e, err := Build(v)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	// The run of three inside the span is not a closing delimiter, so the
+	// period after it is still inside code and must not become a break.
+	out, err := e.Format([]byte("Text `a ``` b. c` end. More.\n"))
+	if err != nil {
+		t.Fatalf("Format: %v", err)
+	}
+	want := "Text `a ``` b. c` end.\nMore.\n"
+	if string(out) != want {
+		t.Errorf("\n got: %q\nwant: %q", out, want)
 	}
 }

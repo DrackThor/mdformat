@@ -149,6 +149,11 @@ func canInterruptParagraph(rest string) bool {
 
 // endsList reports whether l closes an open list block instead of continuing it
 // lazily. Headings and fences do too, but they are surrounded on their own.
+//
+// For example, "---" and "> quote" end the list, while "    ---" is indented
+// far enough to still belong to the item.
+//
+// See TestEndsList.
 func endsList(l string) bool {
 	if indent, _ := splitIndent(l); indentWidth(indent) >= indentedCodeWidth {
 		return false
@@ -161,6 +166,11 @@ func isBlankLine(s string) bool { return strings.TrimSpace(s) == "" }
 // isHeadingLine reports whether l is an ATX heading that may be surrounded by
 // blank lines. A heading inside a blockquote may not: a bare blank line there
 // would end the quote instead of spacing the heading.
+//
+// For example, "# Title" qualifies, but "> # Title" does not, and neither does
+// any line inside a fenced block, which the caller reports through masked.
+//
+// See TestIsHeadingLine.
 func isHeadingLine(l string, masked bool) bool {
 	return !masked && classify(l) == kindATXHeading && quoteDepth(l) == 0
 }

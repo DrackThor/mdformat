@@ -38,6 +38,13 @@ func (e *Engine) Format(src []byte) ([]byte, error) {
 
 // FormatTrace formats src like [Engine.Format] and additionally reports which
 // rules changed the document and where.
+//
+// For example, formatting "a \nb\nc \n" with only trailing-whitespace enabled
+// returns one [RuleChange] naming that rule with Lines [1 3]. Rules that leave
+// the document untouched produce no entry at all.
+//
+// See TestEngine_FormatTrace_ExactLines, TestEngine_FormatTrace_Range and
+// TestEngine_FormatTrace_UnchangedRulesAbsent.
 func (e *Engine) FormatTrace(src []byte) ([]byte, Trace, error) {
 	text := strings.ReplaceAll(string(src), "\r\n", "\n")
 	text = strings.ReplaceAll(text, "\r", "\n")
@@ -70,6 +77,12 @@ func (e *Engine) FormatTrace(src []byte) ([]byte, Trace, error) {
 // exact line numbers; when they do not, the common prefix and suffix are trimmed
 // and the span between them is reported as a range, which is as much as can be
 // said without a real diff.
+//
+// For example ["a" "b"] to ["a" "c"] reports line 2, while ["a" "b" "c"] to
+// ["a" "c"] reports the range 2-2: the deleted line leaves nothing to point at,
+// so the range collapses onto the line now at the seam.
+//
+// See TestDiffLines.
 func diffLines(before, after []string) (lines []int, from, to int) {
 	if len(before) == len(after) {
 		for i := range before {

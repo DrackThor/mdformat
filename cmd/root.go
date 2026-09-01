@@ -176,7 +176,7 @@ func formatFile(engine *format.Engine, path string, checkOnly bool, verbosity in
 	if bytes.Equal(out, src) {
 		return false, nil
 	}
-	printTrace(path, trace, verbosity)
+	fmt.Fprint(os.Stderr, printTrace(path, trace, verbosity))
 	if checkOnly {
 		fmt.Printf("would reformat %s\n", path)
 		return true, nil
@@ -194,22 +194,32 @@ func formatFile(engine *format.Engine, path string, checkOnly bool, verbosity in
 }
 
 // printTrace reports what each rule changed: the rule names at verbosity 1, one
-// line per rule with the lines it touched above that.
-func printTrace(path string, trace format.Trace, verbosity int) {
-	switch {
-	case verbosity < 1 || len(trace) == 0:
-		return
-	case verbosity == 1:
+// line per rule with the lines it touched above that. It returns "" below
+// verbosity 1 and for a file no rule changed.
+//
+// For example, a file two rules changed renders
+// "doc.md: trailing-whitespace, blank-lines\n" at verbosity 1, and at
+// verbosity 2 one line per rule ending in the [located] description of its
+// changes.
+//
+// See TestPrintTrace.
+func printTrace(path string, trace format.Trace, verbosity int) string {
+	if verbosity < 1 || len(trace) == 0 {
+		return ""
+	}
+	if verbosity == 1 {
 		names := make([]string, len(trace))
 		for i, change := range trace {
 			names[i] = change.Rule
 		}
-		fmt.Fprintf(os.Stderr, "%s: %s\n", path, strings.Join(names, ", "))
-	default:
-		for _, change := range trace {
-			fmt.Fprintf(os.Stderr, "%s  %-24s %s\n", path, change.Rule, located(change))
-		}
+		return fmt.Sprintf("%s: %s\n", path, strings.Join(names, ", "))
 	}
+
+	var b strings.Builder
+	for _, change := range trace {
+		fmt.Fprintf(&b, "%s  %-24s %s\n", path, change.Rule, located(change))
+	}
+	return b.String()
 }
 
 // maxReportedLines caps how many line numbers one rule reports, so a rule that
@@ -217,6 +227,13 @@ func printTrace(path string, trace format.Trace, verbosity int) {
 const maxReportedLines = 10
 
 // located renders where a rule made its changes.
+//
+// For example, a rule that rewrote lines 1 and 3 in place renders
+// "lines 1, 3", a rule that changed the line count renders its range as
+// "lines 4-9", and anything past [maxReportedLines] line numbers is summarized
+// as a trailing " (+N more)".
+//
+// See TestLocated.
 func located(change format.RuleChange) string {
 	if len(change.Lines) == 0 {
 		if change.From == change.To {

@@ -135,6 +135,11 @@ func hardLineBreak(line string) bool {
 }
 
 // quoteDepth returns the number of blockquote markers a line opens with.
+//
+// For example, quoteDepth("> > text") returns 2 and quoteDepth("text")
+// returns 0.
+//
+// See TestQuoteDepth.
 func quoteDepth(line string) int {
 	quoteEnd, _, _ := scanPrefix(line)
 	return strings.Count(line[:quoteEnd], ">")
@@ -143,6 +148,12 @@ func quoteDepth(line string) int {
 // isProse reports whether a line's content is ordinary prose eligible for
 // sentence splitting. A list item qualifies: its marker is part of the block
 // prefix, and the text after it is prose like any other.
+//
+// For example, both "- item text" and "> quoted prose" are prose, while
+// "# heading" and a table row are not. Indentation is part of the prefix too,
+// so "    code" reads as prose here; callers pair this with [isIndented].
+//
+// See TestIsProse.
 func isProse(l string) bool {
 	content, _ := splitPrefix(l)
 	return classify(content) == kindParagraph

@@ -63,6 +63,11 @@ func (setextHeadings) Apply(lines []string) ([]string, error) {
 // "=", 2 for a run of "-" — or 0 when l is not an underline. A "-" run is also a
 // thematic break; the caller decides which it is by whether a paragraph precedes
 // it, as CommonMark does.
+//
+// For example, setextLevel("===") returns 1, setextLevel("  --  ") returns 2,
+// and setextLevel("== x") returns 0.
+//
+// See TestSetextLevel.
 func setextLevel(l string) int {
 	indent, s := splitIndent(strings.TrimRight(l, " \t"))
 	if indentWidth(indent) > 3 { // indented far enough to be code, not an underline
@@ -89,6 +94,11 @@ func setextLevel(l string) int {
 // underline turns into a heading. Anything that opens a different block cannot,
 // and neither can quoted content: the underline below it sits outside the quote,
 // where it is a thematic break rather than that paragraph's underline.
+//
+// For example, "paragraph text" qualifies, while "- item", "# heading" and
+// "> quoted" do not.
+//
+// See TestIsParagraphLine.
 func isParagraphLine(l string) bool {
 	return classify(l) == kindParagraph && quoteDepth(l) == 0
 }
