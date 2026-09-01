@@ -58,7 +58,7 @@ type fenceBlock struct {
 func fenceBlocks(lines []string, start int) []fenceBlock {
 	var blocks []fenceBlock
 	for i := start; i < len(lines); i++ {
-		body := strings.TrimLeft(lines[i], " \t")
+		indent, body := splitIndent(lines[i])
 		marker := fenceMarker(body)
 		if marker == "" {
 			continue
@@ -66,7 +66,7 @@ func fenceBlocks(lines []string, start int) []fenceBlock {
 		b := fenceBlock{
 			open:   i,
 			close:  -1,
-			indent: lines[i][:len(lines[i])-len(body)],
+			indent: indent,
 			marker: marker,
 			info:   body[len(marker):],
 		}
@@ -86,22 +86,4 @@ func fenceBlocks(lines []string, start int) []fenceBlock {
 		i = b.close
 	}
 	return blocks
-}
-
-// fenceMarker returns the leading run of backticks or tildes (length >= 3) that
-// starts s, or "" if s does not open/close a code fence.
-func fenceMarker(s string) string {
-	if !strings.HasPrefix(s, "```") && !strings.HasPrefix(s, "~~~") {
-		return ""
-	}
-	return s[:markerRun(s, s[0])]
-}
-
-// markerRun returns the length of the run of ch that starts s.
-func markerRun(s string, ch byte) int {
-	n := 0
-	for n < len(s) && s[n] == ch {
-		n++
-	}
-	return n
 }

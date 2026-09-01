@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/drackthor/mdformat/internal/config"
@@ -20,6 +21,7 @@ var (
 	recursive   bool
 	checkOnly   bool
 	showVersion bool
+	verbosity   int
 )
 
 var markdownExts = map[string]bool{".md": true, ".markdown": true}
@@ -42,7 +44,7 @@ an explicit --config file.`,
 		}
 		return cobra.MinimumNArgs(1)(cmd, args)
 	},
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if showVersion {
 			fmt.Println(version.String())
 			return nil
@@ -56,6 +58,10 @@ an explicit --config file.`,
 		if err != nil {
 			return err
 		}
+		// The flag wins over a "verbosity" key in the config file.
+		if !cmd.Flags().Changed("verbose") {
+			verbosity = v.GetInt("verbosity")
+		}
 
 		files, err := collectFiles(args)
 		if err != nil {
@@ -64,7 +70,7 @@ an explicit --config file.`,
 
 		changed := 0
 		for _, f := range files {
-			wasChanged, err := formatFile(engine, f, checkOnly)
+			wasChanged, err := formatFile(engine, f, checkOnly, verbosity)
 			if err != nil {
 				return err
 			}
@@ -93,6 +99,8 @@ func init() {
 	rootCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "recurse into directories")
 	rootCmd.Flags().BoolVar(&checkOnly, "check", false, "report files needing formatting without writing; exit non-zero if any")
 	rootCmd.Flags().BoolVar(&showVersion, "version", false, "print mdformat version and exit")
+	rootCmd.Flags().CountVarP(&verbosity, "verbose", "v",
+		"name the rules that changed each file; repeat (-vv) to add the lines they changed")
 	rootCmd.AddCommand(newVersionCommand())
 }
 
@@ -153,19 +161,22 @@ func isMarkdown(name string) bool {
 }
 
 // formatFile formats a single file, writing changes in place unless checkOnly is
-// set. It returns whether the file's content changed.
-func formatFile(engine *format.Engine, path string, checkOnly bool) (bool, error) {
+// set. It returns whether the file's content changed. What the rules did is
+// reported on stderr from verbosity 1 upward, leaving stdout to the file lines a
+// pipeline consumes.
+func formatFile(engine *format.Engine, path string, checkOnly bool, verbosity int) (bool, error) {
 	src, err := os.ReadFile(path)
 	if err != nil {
 		return false, fmt.Errorf("read %s: %w", path, err)
 	}
-	out, err := engine.Format(src)
+	out, trace, err := engine.FormatTrace(src)
 	if err != nil {
 		return false, fmt.Errorf("format %s: %w", path, err)
 	}
 	if bytes.Equal(out, src) {
 		return false, nil
 	}
+	fmt.Fprint(os.Stderr, printTrace(path, trace, verbosity))
 	if checkOnly {
 		fmt.Printf("would reformat %s\n", path)
 		return true, nil
@@ -180,4 +191,70 @@ func formatFile(engine *format.Engine, path string, checkOnly bool) (bool, error
 	}
 	fmt.Printf("formatted %s\n", path)
 	return true, nil
+}
+
+// printTrace reports what each rule changed: the rule names at verbosity 1, one
+// line per rule with the lines it touched above that. It returns "" below
+// verbosity 1 and for a file no rule changed.
+//
+// For example, a file two rules changed renders
+// "doc.md: trailing-whitespace, blank-lines\n" at verbosity 1, and at
+// verbosity 2 one line per rule ending in the [located] description of its
+// changes.
+//
+// See TestPrintTrace.
+func printTrace(path string, trace format.Trace, verbosity int) string {
+	if verbosity < 1 || len(trace) == 0 {
+		return ""
+	}
+	if verbosity == 1 {
+		names := make([]string, len(trace))
+		for i, change := range trace {
+			names[i] = change.Rule
+		}
+		return fmt.Sprintf("%s: %s\n", path, strings.Join(names, ", "))
+	}
+
+	var b strings.Builder
+	for _, change := range trace {
+		fmt.Fprintf(&b, "%s  %-24s %s\n", path, change.Rule, located(change))
+	}
+	return b.String()
+}
+
+// maxReportedLines caps how many line numbers one rule reports, so a rule that
+// touches every line of a long document stays readable.
+const maxReportedLines = 10
+
+// located renders where a rule made its changes.
+//
+// For example, a rule that rewrote lines 1 and 3 in place renders
+// "lines 1, 3", a rule that changed the line count renders its range as
+// "lines 4-9", and anything past [maxReportedLines] line numbers is summarized
+// as a trailing " (+N more)".
+//
+// See TestLocated.
+func located(change format.RuleChange) string {
+	if len(change.Lines) == 0 {
+		if change.From == change.To {
+			return fmt.Sprintf("line %d", change.From)
+		}
+		return fmt.Sprintf("lines %d-%d", change.From, change.To)
+	}
+
+	shown := change.Lines
+	suffix := ""
+	if len(shown) > maxReportedLines {
+		suffix = fmt.Sprintf(" (+%d more)", len(shown)-maxReportedLines)
+		shown = shown[:maxReportedLines]
+	}
+	numbers := make([]string, len(shown))
+	for i, n := range shown {
+		numbers[i] = strconv.Itoa(n)
+	}
+	label := "lines"
+	if len(change.Lines) == 1 {
+		label = "line"
+	}
+	return label + " " + strings.Join(numbers, ", ") + suffix
 }

@@ -127,7 +127,29 @@ options:
 | `--config <file>`  | `-c`   | Explicit config file (highest precedence).                       |
 | `--recursive`      | `-r`   | Recurse into directories.                                        |
 | `--check`          |        | Report files needing formatting without writing; exit non-zero.  |
+| `--verbose`        | `-v`   | Name the rules that changed each file; `-vv` adds the lines.     |
 | `--version`        |        | Print the mdformat version and exit.                             |
+
+## Verbose output
+
+`-v` names the rules that changed a file, `-vv` adds the lines each rule touched.
+Both write to stderr, so stdout keeps the `formatted <file>` lines a pipeline reads.
+The same setting lives in the config as `verbosity: 0|1|2`; the flag wins when both are given.
+
+```console
+$ mdformat -v README.md
+README.md: table-width, blank-lines
+formatted README.md
+
+$ mdformat -vv README.md
+README.md  table-width       lines 21-28
+README.md  blank-lines       lines 19, 97
+formatted README.md
+```
+
+Line numbers are as of the rule that reported them.
+A rule running later that inserts or removes lines shifts the ones before it.
+A rule that changes the line count reports the region it rewrote rather than single lines.
 
 ## Adding a rule
 

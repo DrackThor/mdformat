@@ -7,6 +7,13 @@
 # The "rules" list defines BOTH which rules run and the order they run in.
 # Remove a rule from the list to disable it.
 
+# How much the CLI reports about its own work:
+#   0  only the files it changed (default)
+#   1  the rules that changed each file
+#   2  the lines each rule changed
+# The -v/-vv flag overrides this.
+verbosity: 0
+
 rules:
   - trailing-whitespace
   - hard-tabs

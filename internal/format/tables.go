@@ -64,7 +64,7 @@ func (r tableWidth) Apply(lines []string) ([]string, error) {
 }
 
 func (r tableWidth) formatTable(block []string) []string {
-	indent := block[0][:len(block[0])-len(strings.TrimLeft(block[0], " "))]
+	indent, _ := splitIndent(block[0])
 
 	header := splitRow(block[0])
 	aligns := parseAligns(block[1])

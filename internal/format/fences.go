@@ -82,7 +82,7 @@ func (r codeFenceStyle) fenceLen(lines []string, b fenceBlock) int {
 	longest := 0
 	for i := b.open + 1; i < end; i++ {
 		_, rest := splitIndent(lines[i])
-		if run := markerRun(rest, r.marker); run > longest {
+		if run := runLen(rest, 0, r.marker); run > longest {
 			longest = run
 		}
 	}
@@ -90,10 +90,4 @@ func (r codeFenceStyle) fenceLen(lines []string, b fenceBlock) int {
 		return longest + 1
 	}
 	return minFenceLen
-}
-
-// splitIndent splits l into its leading whitespace and the rest of the line.
-func splitIndent(l string) (indent, rest string) {
-	rest = strings.TrimLeft(l, " \t")
-	return l[:len(l)-len(rest)], rest
 }

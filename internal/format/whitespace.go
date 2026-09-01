@@ -112,7 +112,10 @@ func listEdges(lines []string, mask []bool) (starts, inList []bool) {
 		default:
 			indent, rest := splitIndent(l)
 			switch {
-			case len(indent) < indentedCodeWidth && listMarkerLen(rest) > 0 && !isThematicBreak(l):
+			// A quoted list is left alone: a bare blank line inserted around it
+			// would end the blockquote rather than space the list.
+			case classify(l) == kindListItem && quoteDepth(l) == 0 &&
+				indentWidth(indent) < indentedCodeWidth:
 				if !open {
 					starts[i] = canInterruptParagraph(rest)
 				}
@@ -146,22 +149,30 @@ func canInterruptParagraph(rest string) bool {
 
 // endsList reports whether l closes an open list block instead of continuing it
 // lazily. Headings and fences do too, but they are surrounded on their own.
+//
+// For example, "---" and "> quote" end the list, while "    ---" is indented
+// far enough to still belong to the item.
+//
+// See TestEndsList.
 func endsList(l string) bool {
-	indent, rest := splitIndent(l)
-	if len(indent) >= indentedCodeWidth {
+	if indent, _ := splitIndent(l); indentWidth(indent) >= indentedCodeWidth {
 		return false
 	}
-	return strings.HasPrefix(rest, ">") || isThematicBreak(l)
+	return classify(l) == kindThematicBreak || quoteDepth(l) > 0
 }
 
 func isBlankLine(s string) bool { return strings.TrimSpace(s) == "" }
 
+// isHeadingLine reports whether l is an ATX heading that may be surrounded by
+// blank lines. A heading inside a blockquote may not: a bare blank line there
+// would end the quote instead of spacing the heading.
+//
+// For example, "# Title" qualifies, but "> # Title" does not, and neither does
+// any line inside a fenced block, which the caller reports through masked.
+//
+// See TestIsHeadingLine.
 func isHeadingLine(l string, masked bool) bool {
-	if masked {
-		return false
-	}
-	_, _, ok := parseATXHeading(l)
-	return ok
+	return !masked && classify(l) == kindATXHeading && quoteDepth(l) == 0
 }
 
 // isFenceEdge reports whether line i is a fence marker at the boundary of a
