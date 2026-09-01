@@ -79,19 +79,16 @@ becomes
 ## Subtitle
 ```
 
-Implementation: detect a non-blank text line followed by a line of only `=` (H1) or `-` (H2),
-outside `codeMask`, and where the underline is not a thematic break / table delimiter.
+Implementation: detect a non-blank text line followed by a line of only `=` (H1) or `-` (H2), outside `codeMask`, and where the underline is not a thematic break / table delimiter.
 Emit `# `/`## ` + text, drop the underline.
 Note ordering: must run before `blank-lines` so the surround pass sees a real heading.
 
 ### 2. `ordered-list-numbering` [rule] — DONE
 
 Implemented in `internal/format/ordered.go`, runs after `list-markers` in `DefaultRuleOrder`.
-The number a list starts at is preserved (a list written as `3.` still renders as 3);
-only the items after the first are rewritten.
+The number a list starts at is preserved (a list written as `3.` still renders as 3); only the items after the first are rewritten.
 
-mdformat renumbers ordered lists and defaults to the non-incrementing `1.` style,
-which minimizes diffs when items are inserted (markdownlint MD029).
+mdformat renumbers ordered lists and defaults to the non-incrementing `1.` style, which minimizes diffs when items are inserted (markdownlint MD029).
 
 Option `style`:
 
@@ -121,16 +118,16 @@ with `style: keep`:
 ```
 
 Implementation: track list blocks (leading indent + `orderedMarkerLen` already exists in `sembr.go`).
-Reuse `listMarkerLen`/`orderedMarkerLen`. Reset numbering per list (blank line or dedent ends a list).
+Reuse `listMarkerLen`/`orderedMarkerLen`.
+Reset numbering per list (blank line or dedent ends a list).
 
 ### 3. `hard-tabs` → spaces [rule] — DONE
 
-Implemented in `internal/format/tabs.go`, runs right after `trailing-whitespace`
-so every later rule sees spaces instead of tabs.
-A tab expands to the next tab stop rather than to a fixed number of spaces,
-which is how Markdown itself reads tabs.
+Implemented in `internal/format/tabs.go`, runs right after `trailing-whitespace` so every later rule sees spaces instead of tabs.
+A tab expands to the next tab stop rather than to a fixed number of spaces, which is how Markdown itself reads tabs.
 
-markdownlint MD010. Expand leading hard tabs to spaces (configurable width, default 4).
+markdownlint MD010.
+Expand leading hard tabs to spaces (configurable width, default 4).
 Must NOT touch tabs inside fenced/inline code.
 
 ```markdown
@@ -143,15 +140,14 @@ becomes
 -   Item with a tab
 ```
 
-Implementation: replace `\t` outside `codeMask` and outside inline-code spans
-(reuse `inlineProtected` from `sembr.go`).
+Implementation: replace `\t` outside `codeMask` and outside inline-code spans (reuse `inlineProtected` from `sembr.go`).
 
 ### 4. `heading-trailing-punctuation` [rule] — DONE
 
-markdownlint MD026. Strip trailing `.,;:!?` from heading text (configurable punctuation set).
+markdownlint MD026.
+Strip trailing `.,;:!?` from heading text (configurable punctuation set).
 
-Landed as the `atx-headings` option `strip-trailing-punctuation` (default `".,;:!?"`,
-empty string disables) rather than a separate rule.
+Landed as the `atx-headings` option `strip-trailing-punctuation` (default `".,;:!?"`, empty string disables) rather than a separate rule.
 
 ```markdown
 ## Overview:
@@ -163,32 +159,30 @@ becomes
 ## Overview
 ```
 
-Implementation: small extension; could fold into `atx-headings` as an option
-`strip-trailing-punctuation: ".,;:!?"` rather than a separate rule.
+Implementation: small extension; could fold into `atx-headings` as an option `strip-trailing-punctuation: ".,;:!?"` rather than a separate rule.
 
 ### 5. `code-fence-style` [rule] — DONE (marker part)
 
 Implemented in `internal/format/fences.go`, runs after `hard-tabs` in `DefaultRuleOrder`.
 `scan.go` now reports blocks via `fenceBlocks`, which `codeMask` also builds on.
-Option `marker` ("`" default, or "~"); fences are three characters long unless
-their content holds a longer run of the marker.
+Option `marker` ("`" default, or "~"); fences are three characters long unless their content holds a longer run of the marker.
 The indented → fenced part (MD046) is still open.
 
 markdownlint MD048 + MD046 (fenced over indented).
 Normalize all fences to one marker (default backticks) and normalize fence length.
 
-Input uses `~~~` fences; output uses backtick fences (shown with tilde wrappers here to
-avoid nested code fences):
+Input uses `~~~` fences; output uses backtick fences (shown with tilde wrappers here to avoid nested code fences):
 
-~~~text
+```text
 before:  ~~~ … ~~~
 after:   ``` … ```
-~~~
+```
 
 Two parts:
 
 - **fence marker**: rewrite `~~~` ↔ backtick fences (respect content that contains the target marker — widen instead).
-- **indented → fenced** (MD046): convert 4-space indented code blocks to fenced. Higher effort; keep as its own sub-task.
+- **indented → fenced** (MD046): convert 4-space indented code blocks to fenced.
+  Higher effort; keep as its own sub-task.
 
 `scan.go`'s `fenceMarker` already parses both markers — extend the scanner to report the block so the rule can rewrite the edges.
 
@@ -198,19 +192,15 @@ Implemented in `internal/format/whitespace.go` (`listEdges`), used by `surroundB
 
 Blank lines are only inserted where the render does not change:
 
-- Before a list that already starts a list, i.e. one that can interrupt a paragraph
-  (a bullet with content, or an ordered item starting at `1.`).
+- Before a list that already starts a list, i.e. one that can interrupt a paragraph (a bullet with content, or an ordered item starting at `1.`).
   `text` + `2. a` stays prose, because a blank line there would turn it into a list.
 - After a list, before a block that already closes it (a block quote or thematic break).
   Headings and fences close a list too, but they are surrounded on their own.
 
-Never before a lazy continuation: the text written directly under an item belongs to
-that item, so splitting it off with a blank line would change the render rather than
-tidy it. `semantic-line-breaks` folds such a line into its item instead, which makes
-the same point visible.
+Never before a lazy continuation: the text written directly under an item belongs to that item, so splitting it off with a blank line would change the render rather than tidy it.
+`semantic-line-breaks` folds such a line into its item instead, which makes the same point visible.
 
-Extend the existing `blank-lines` rule to also ensure a blank line before and after
-list blocks, not just headings and fences.
+Extend the existing `blank-lines` rule to also ensure a blank line before and after list blocks, not just headings and fences.
 
 ```markdown
 text
@@ -230,16 +220,15 @@ text
 next
 ```
 
-Implementation: `surroundBlocks` in `whitespace.go` — add a list-block edge detector alongside
-`isHeadingLine`/`isFenceEdge`. Careful with tight vs. loose lists.
+Implementation: `surroundBlocks` in `whitespace.go` — add a list-block edge detector alongside `isHeadingLine`/`isFenceEdge`.
+Careful with tight vs. loose lists.
 
 ______________________________________________________________________
 
 ## Tier 2 — inline normalization (needs an inline tokenizer)
 
 These need reliable inline parsing so we never corrupt code spans, links, or escapes.
-Reuse and extend `inlineProtected` (backticks, autolinks, link destinations) into a small
-inline tokenizer shared by all inline rules.
+Reuse and extend `inlineProtected` (backticks, autolinks, link destinations) into a small inline tokenizer shared by all inline rules.
 
 ### 7. `emphasis-style` [rule]
 
@@ -261,8 +250,8 @@ Do NOT rewrite markers that would change meaning (e.g. intra-word `_` in snake_c
 
 ### 8. `code-span-trim` [rule]
 
-markdownlint MD038. Trim a single leading/trailing space inside code spans
-and minimize backtick fence length to the shortest that is valid.
+markdownlint MD038.
+Trim a single leading/trailing space inside code spans and minimize backtick fence length to the shortest that is valid.
 
 ```markdown
 ` code ` and ``a`b``
@@ -292,8 +281,7 @@ See [the docs](https://example.com) and <http://bare.example.com>
 
 ### 10. `reference-links` [rule]
 
-mdformat moves all link reference definitions to the bottom, sorted by label,
-and drops duplicate/unused definitions (markdownlint MD052/MD053).
+mdformat moves all link reference definitions to the bottom, sorted by label, and drops duplicate/unused definitions (markdownlint MD052/MD053).
 
 ```markdown
 [a]: http://a.example.com
@@ -311,8 +299,8 @@ Text [a][a] and [b][b].
 [b]: http://b.example.com
 ```
 
-Higher effort: needs a document-wide pass, not just per-line. Consider a `Rule` variant that
-sees the whole doc (current interface already passes all lines).
+Higher effort: needs a document-wide pass, not just per-line.
+Consider a `Rule` variant that sees the whole doc (current interface already passes all lines).
 
 ### 11. `hard-line-break` policy [rule / core]
 
@@ -340,20 +328,22 @@ ______________________________________________________________________
 
 ### 12. `--wrap {keep,no,N}` [flag/core]
 
-mdformat's paragraph wrapping. `keep` (default), `no` (unwrap to one line per paragraph),
-or an integer column to reflow to. This generalizes our `semantic-line-breaks`;
-consider whether `wrap` and `semantic-line-breaks` are two modes of one wrapping engine.
+mdformat's paragraph wrapping.
+`keep` (default), `no` (unwrap to one line per paragraph), or an integer column to reflow to.
+This generalizes our `semantic-line-breaks`; consider whether `wrap` and `semantic-line-breaks` are two modes of one wrapping engine.
 
 ### 13. `--end-of-line {lf,crlf,keep}` [flag/core]
 
-We hard-code LF in `engine.go`. Make it configurable (default `lf`), and support `keep`
-(detect the file's dominant ending and preserve it). mdformat parity.
+We hard-code LF in `engine.go`.
+Make it configurable (default `lf`), and support `keep` (detect the file's dominant ending and preserve it).
+mdformat parity.
 
 ### 14. `--diff` and stdin/stdout [flag] (black + mdformat)
 
 - `-` as a path → read stdin, write formatted result to stdout (pipeline use).
 - `--diff` → print a unified diff instead of writing; pairs with `--check`.
 - `--quiet` / `--color` for CI ergonomics.
+  (`-v`/`-vv` and the `verbosity` config key already exist; `--quiet` is the missing end.)
 
 `--check` already exists and returns non-zero when files would change (black/mdformat semantics).
 
@@ -369,13 +359,12 @@ mdformat -r . --exclude 'vendor/**' --exclude 'CHANGELOG.md'
 ### 16. TOML config parity [flag]
 
 mdformat uses `.mdformat.toml`; black uses `[tool.black]` in `pyproject.toml`.
-Viper already supports TOML — accept `.mdformat.toml` in addition to `.mdformat.yaml`
-in `internal/config` (same precedence chain). Low effort, nice for cross-tool users.
+Viper already supports TOML — accept `.mdformat.toml` in addition to `.mdformat.yaml` in `internal/config` (same precedence chain).
+Low effort, nice for cross-tool users.
 
 ### 17. Safety / idempotency guarantee [core] (black's headline feature)
 
-black verifies the reformatted output parses to an equivalent AST; mdformat re-renders to HTML
-and asserts the render is unchanged (`--validate`, on by default).
+black verifies the reformatted output parses to an equivalent AST; mdformat re-renders to HTML and asserts the render is unchanged (`--validate`, on by default).
 
 - Minimum: after formatting, run the engine again and assert output is stable; warn/fail on drift.
 - Stretch: render input and output Markdown to HTML and compare (a `--validate` / `--no-validate` flag).
@@ -402,26 +391,23 @@ Our `Register` registry is already the seam for an extension system.
 - **GFM task lists**: normalize `- [ ]` / `- [x]` spacing.
 - **Strikethrough / autolinks**: leave content intact; ensure inline rules skip them.
 - **Footnotes** (`mdformat-footnote`): normalize `[^1]` definitions, move to bottom, renumber.
-- **Front matter** (`mdformat-frontmatter`): we already treat leading `---` as verbatim (`scan.go`);
-  optional: format the YAML/TOML inside.
+- **Front matter** (`mdformat-frontmatter`): we already treat leading `---` as verbatim (`scan.go`); optional: format the YAML/TOML inside.
 - **TOC generation** (`mdformat-toc`): populate a `<!-- toc -->` marker from headings.
-- **Table column count / pipe style** (markdownlint MD055/MD056): our `table-width` should
-  also pad ragged rows to the header's column count and enforce leading/trailing pipes consistently.
+- **Table column count / pipe style** (markdownlint MD055/MD056): our `table-width` should also pad ragged rows to the header's column count and enforce leading/trailing pipes consistently.
 
 ______________________________________________________________________
 
 ## Lint-only checks (report, do not autofix)
 
-Some markdownlint rules cannot be safely auto-fixed — surface them under a `--lint` mode
-(exit non-zero, print `file:line rule message`) instead of rewriting:
+Some markdownlint rules cannot be safely auto-fixed — surface them under a `--lint` mode (exit non-zero, print `file:line rule message`) instead of rewriting:
 
-| Rule  | Check                                            | Why not auto-fix                    |
-| ----- | ------------------------------------------------ | ----------------------------------- |
-| MD001 | Heading levels increment by one                  | Correct level is author intent      |
-| MD025 | Only one top-level (H1) heading                  | Which H1 to demote is ambiguous     |
-| MD040 | Fenced code blocks specify a language            | Cannot infer the language           |
-| MD036 | Emphasis used instead of a heading               | Intent is ambiguous                 |
-| MD005 | Consistent list-item indentation at same level   | Fix may change nesting              |
+| Rule   | Check                                           | Why not auto-fix                 |
+| ------ | ----------------------------------------------- | -------------------------------- |
+| MD001  | Heading levels increment by one                 | Correct level is author intent   |
+| MD025  | Only one top-level (H1) heading                 | Which H1 to demote is ambiguous  |
+| MD040  | Fenced code blocks specify a language           | Cannot infer the language        |
+| MD036  | Emphasis used instead of a heading              | Intent is ambiguous              |
+| MD005  | Consistent list-item indentation at same level  | Fix may change nesting           |
 
 ______________________________________________________________________
 

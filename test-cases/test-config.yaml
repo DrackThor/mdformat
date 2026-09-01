@@ -23,6 +23,22 @@ cases:
   - input: hard-tabs.md
     expected: hard-tabs.md
 
+  - input: hard-tabs-disabled.md
+    expected: hard-tabs-disabled.md
+    config:
+      # Without hard-tabs every later rule sees the tabs themselves, which is
+      # where the indent readers have to agree that a tab is four columns.
+      rules:
+        - trailing-whitespace
+        - code-fence-style
+        - setext-headings
+        - atx-headings
+        - list-markers
+        - ordered-list-numbering
+        - semantic-line-breaks
+        - table-width
+        - blank-lines
+
   - input: code-fence-style.md
     expected: code-fence-style.md
 

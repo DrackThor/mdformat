@@ -82,7 +82,7 @@ func (r orderedListNumbering) applyLine(l string, afterBlank bool, levels *[]ord
 		*levels = (*levels)[:len(*levels)-1]
 	}
 
-	rest := strings.TrimLeft(l, " \t")
+	_, rest := splitIndent(l)
 	switch {
 	case isThematicBreak(l):
 		*levels = nil
@@ -125,21 +125,4 @@ func (r orderedListNumbering) renumber(l string, indent int, rest string, levels
 	num := lvl.num
 	lvl.num++
 	return l[:len(l)-len(rest)] + strconv.Itoa(num) + string(delim) + rest[markerLen:]
-}
-
-// leadingIndent returns the indentation width of a line, counting a tab as four
-// columns.
-func leadingIndent(l string) int {
-	n := 0
-	for i := 0; i < len(l); i++ {
-		switch l[i] {
-		case ' ':
-			n++
-		case '\t':
-			n += indentedCodeWidth
-		default:
-			return n
-		}
-	}
-	return n
 }

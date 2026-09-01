@@ -64,12 +64,10 @@ func (setextHeadings) Apply(lines []string) ([]string, error) {
 // thematic break; the caller decides which it is by whether a paragraph precedes
 // it, as CommonMark does.
 func setextLevel(l string) int {
-	s := strings.TrimRight(l, " \t")
-	indent := len(s) - len(strings.TrimLeft(s, " "))
-	if indent > 3 { // indented far enough to be code, not an underline
+	indent, s := splitIndent(strings.TrimRight(l, " \t"))
+	if indentWidth(indent) > 3 { // indented far enough to be code, not an underline
 		return 0
 	}
-	s = s[indent:]
 	if s == "" {
 		return 0
 	}
@@ -88,26 +86,11 @@ func setextLevel(l string) int {
 }
 
 // isParagraphLine reports whether l can be part of the paragraph that a Setext
-// underline turns into a heading. Anything that opens a different block — a
-// list item, blockquote, table row, fence, ATX heading, thematic break, or
-// indented code — cannot.
+// underline turns into a heading. Anything that opens a different block cannot,
+// and neither can quoted content: the underline below it sits outside the quote,
+// where it is a thematic break rather than that paragraph's underline.
 func isParagraphLine(l string) bool {
-	if strings.TrimSpace(l) == "" || isThematicBreak(l) {
-		return false
-	}
-	if _, _, ok := parseATXHeading(l); ok {
-		return false
-	}
-	indent := len(l) - len(strings.TrimLeft(l, " "))
-	if indent >= indentedCodeWidth {
-		return false
-	}
-	s := l[indent:]
-	switch s[0] {
-	case '>', '<', '|', '=':
-		return false
-	}
-	return fenceMarker(s) == "" && listMarkerLen(s) == 0
+	return classify(l) == kindParagraph && quoteDepth(l) == 0
 }
 
 // joinParagraph collapses a hard-wrapped paragraph into the single line an ATX

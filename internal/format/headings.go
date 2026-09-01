@@ -81,34 +81,3 @@ func escapedEnd(s string) bool {
 	}
 	return n%2 == 1
 }
-
-// parseATXHeading reports whether l is an ATX heading and returns its "#" run
-// and the trimmed heading text (with any closing "#" sequence removed).
-func parseATXHeading(l string) (hashes, text string, ok bool) {
-	s := strings.TrimLeft(l, " ")
-	if len(l)-len(s) > 3 { // more than 3 leading spaces = not a heading
-		return "", "", false
-	}
-	n := 0
-	for n < len(s) && s[n] == '#' {
-		n++
-	}
-	if n == 0 || n > 6 {
-		return "", "", false
-	}
-	rest := s[n:]
-	if rest != "" && rest[0] != ' ' && rest[0] != '\t' {
-		return "", "", false // "#text" is not a heading per CommonMark
-	}
-	text = strings.TrimSpace(rest)
-	// Strip an optional closing run of '#' only when it is preceded by a space
-	// (CommonMark), so "# C#" keeps its trailing '#'.
-	if j := strings.LastIndexFunc(text, func(r rune) bool { return r != '#' }); j >= 0 {
-		if text[j] == ' ' || text[j] == '\t' {
-			text = strings.TrimRight(text[:j], " \t")
-		}
-	} else if text != "" { // text is all '#'
-		text = ""
-	}
-	return s[:n], text, true
-}

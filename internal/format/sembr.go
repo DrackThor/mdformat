@@ -66,7 +66,7 @@ func (r semBr) Apply(lines []string) ([]string, error) {
 	mask := codeMask(lines)
 	out := make([]string, 0, len(lines))
 	for i := 0; i < len(lines); {
-		if mask[i] || isIndented(lines[i]) || !r.isProse(lines[i]) {
+		if mask[i] || isIndented(lines[i]) || !isProse(lines[i]) {
 			out = append(out, lines[i])
 			i++
 			continue
@@ -115,7 +115,7 @@ func (r semBr) unwrap(lines []string, mask []bool, i int) (joined string, next i
 // blockquote depth, a new list item, and indented (verbatim) content all end the
 // logical line.
 func (r semBr) continues(prev, next string) bool {
-	if hardLineBreak(prev) || !r.isProse(next) {
+	if hardLineBreak(prev) || !isProse(next) {
 		return false
 	}
 	if quoteDepth(prev) != quoteDepth(next) {
@@ -140,37 +140,12 @@ func quoteDepth(line string) int {
 	return strings.Count(line[:quoteEnd], ">")
 }
 
-// isIndented reports whether a line's content is indented far enough to be an
-// indented code block rather than wrapped prose.
-//
-// ponytail: indentation alone, no block tracking. Costs the stitching of
-// paragraphs nested four or more spaces deep inside a list; upgrade to a real
-// indented-code mask in [codeMask] if that shows up.
-func isIndented(line string) bool {
-	_, indent, contentStart := scanPrefix(line)
-	return indent >= indentedCodeWidth && listMarkerLen(line[contentStart:]) == 0
-}
-
 // isProse reports whether a line's content is ordinary prose eligible for
-// sentence splitting (not a heading, table row, HTML block, or thematic break).
-func (semBr) isProse(l string) bool {
-	t := strings.TrimSpace(l)
-	if t == "" {
-		return false
-	}
-	if strings.ContainsRune(t, '|') { // table rows are handled by table-width
-		return false
-	}
+// sentence splitting. A list item qualifies: its marker is part of the block
+// prefix, and the text after it is prose like any other.
+func isProse(l string) bool {
 	content, _ := splitPrefix(l)
-	c := strings.TrimSpace(content)
-	if c == "" {
-		return false
-	}
-	switch c[0] {
-	case '#', '<', '>', '=': // heading, HTML/autolink block, quote-only, setext
-		return false
-	}
-	return !isThematicBreak(l)
+	return classify(content) == kindParagraph
 }
 
 // splitPrefix separates a line's block prefix (indentation, blockquote markers,
@@ -185,78 +160,6 @@ func splitPrefix(line string) (content, contPrefix string) {
 		i += m
 	}
 	return line[i:], contPrefix
-}
-
-// indentedCodeWidth is the indentation at which Markdown treats content as an
-// indented code block.
-const indentedCodeWidth = 4
-
-// scanPrefix measures a line's leading indentation and blockquote markers.
-// quoteEnd is the index just past the last blockquote marker (0 when there is
-// none), indent is the width of the whitespace between those markers and the
-// content (a tab counts as four columns), and contentStart is the index of the
-// first content byte.
-func scanPrefix(line string) (quoteEnd, indent, contentStart int) {
-	i := 0
-	for {
-		spaceStart := i
-		for i < len(line) && (line[i] == ' ' || line[i] == '\t') {
-			i++
-		}
-		if i < len(line) && line[i] == '>' {
-			i++
-			quoteEnd = i
-			continue
-		}
-		for k := spaceStart; k < i; k++ {
-			if line[k] == '\t' {
-				indent += indentedCodeWidth
-			} else {
-				indent++
-			}
-		}
-		return quoteEnd, indent, i
-	}
-}
-
-// listMarkerLen returns the byte length of a leading list marker in s
-// (bullet "- ", "* ", "+ " or ordered "1. " / "1) "), including its trailing
-// whitespace, or 0 if s does not start with one.
-func listMarkerLen(s string) int {
-	if s == "" {
-		return 0
-	}
-	var i int
-	switch s[0] {
-	case '-', '*', '+':
-		i = 1
-	default:
-		i = orderedMarkerLen(s)
-		if i == 0 {
-			return 0
-		}
-	}
-	spaces := 0
-	for i+spaces < len(s) && (s[i+spaces] == ' ' || s[i+spaces] == '\t') {
-		spaces++
-	}
-	if spaces == 0 {
-		return 0
-	}
-	return i + spaces
-}
-
-// orderedMarkerLen returns the byte length of a leading ordered-list marker
-// ("123." or "123)") in s, or 0 if s does not start with one.
-func orderedMarkerLen(s string) int {
-	i := 0
-	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
-		i++
-	}
-	if i == 0 || i >= len(s) || (s[i] != '.' && s[i] != ')') {
-		return 0
-	}
-	return i + 1
 }
 
 // splitSentences splits content into chunks at enabled break punctuation,
@@ -371,62 +274,4 @@ var abbreviations = map[string]bool{
 	"mr": true, "mrs": true, "ms": true, "dr": true, "prof": true, "st": true,
 	"jr": true, "sr": true, "inc": true, "ltd": true, "co": true, "no": true,
 	"vol": true, "fig": true, "eq": true, "approx": true, "sec": true, "min": true,
-}
-
-// inlineProtected marks byte positions in s that lie inside spans where breaks
-// must not occur: inline code spans (backticks), autolinks (<...>), and link or
-// image destinations (the "(...)" after "]").
-func inlineProtected(s string) []bool {
-	p := make([]bool, len(s))
-	i := 0
-	for i < len(s) {
-		switch {
-		case s[i] == '`':
-			n := runLen(s, i, '`')
-			if end := findRun(s, i+n, '`', n); end >= 0 {
-				markRange(p, i, end+n)
-				i = end + n
-				continue
-			}
-		case s[i] == '<':
-			if end := strings.IndexByte(s[i:], '>'); end >= 0 && !strings.ContainsAny(s[i:i+end], " ") {
-				markRange(p, i, i+end+1)
-				i = i + end + 1
-				continue
-			}
-		case s[i] == ']' && i+1 < len(s) && s[i+1] == '(':
-			if end := strings.IndexByte(s[i+1:], ')'); end >= 0 {
-				markRange(p, i+1, i+1+end+1)
-				i = i + 1 + end + 1
-				continue
-			}
-		}
-		i++
-	}
-	return p
-}
-
-func runLen(s string, i int, ch byte) int {
-	n := 0
-	for i+n < len(s) && s[i+n] == ch {
-		n++
-	}
-	return n
-}
-
-// findRun returns the start index of the first run of exactly n ch bytes at or
-// after from, or -1.
-func findRun(s string, from int, ch byte, n int) int {
-	for i := from; i < len(s); i++ {
-		if s[i] == ch && runLen(s, i, ch) == n {
-			return i
-		}
-	}
-	return -1
-}
-
-func markRange(p []bool, lo, hi int) {
-	for i := lo; i < hi && i < len(p); i++ {
-		p[i] = true
-	}
 }

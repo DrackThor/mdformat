@@ -476,3 +476,95 @@ func TestBlankLines_SurroundLists(t *testing.T) {
 		})
 	}
 }
+
+func TestClassify(t *testing.T) {
+	tests := []struct {
+		line string
+		want lineKind
+	}{
+		{"", kindBlank},
+		{"   ", kindBlank},
+		{">", kindBlank},
+		{"# heading", kindATXHeading},
+		{"> # quoted heading", kindATXHeading},
+		{"#hashtag", kindParagraph}, // no space: not a heading per CommonMark
+		{"===", kindSetextUnderline},
+		{"---", kindThematicBreak}, // a "-" run is a break; setext.go decides otherwise
+		{"* * *", kindThematicBreak},
+		{"```go", kindFence},
+		{"~~~", kindFence},
+		{"- item", kindListItem},
+		{"1. item", kindListItem},
+		{"\t- deeply indented item", kindListItem},
+		{"    indented code", kindIndentedCode},
+		{"\tindented code", kindIndentedCode},
+		{"| a | b |", kindTableRow},
+		{"prose with a | pipe", kindTableRow}, // deliberately crude, as sembr needs
+		{"<div>", kindHTMLBlock},
+		{"plain prose", kindParagraph},
+		{"> quoted prose", kindParagraph},
+	}
+	for _, tt := range tests {
+		t.Run(tt.line, func(t *testing.T) {
+			if got := classify(tt.line); got != tt.want {
+				t.Errorf("classify(%q) = %d, want %d", tt.line, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEngine_FormatTrace_ExactLines(t *testing.T) {
+	v := viper.New()
+	v.Set("rules", []string{"trailing-whitespace"})
+	e, err := Build(v)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	_, trace, err := e.FormatTrace([]byte("a \nb\nc \n"))
+	if err != nil {
+		t.Fatalf("FormatTrace: %v", err)
+	}
+	if len(trace) != 1 || trace[0].Rule != nameTrailingWhitespace {
+		t.Fatalf("trace = %+v, want one trailing-whitespace entry", trace)
+	}
+	if got := trace[0].Lines; len(got) != 2 || got[0] != 1 || got[1] != 3 {
+		t.Errorf("Lines = %v, want [1 3]", got)
+	}
+}
+
+func TestEngine_FormatTrace_Range(t *testing.T) {
+	v := viper.New()
+	v.Set("rules", []string{"blank-lines"})
+	e, err := Build(v)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	_, trace, err := e.FormatTrace([]byte("a\n\n\n\nb\n"))
+	if err != nil {
+		t.Fatalf("FormatTrace: %v", err)
+	}
+	if len(trace) != 1 {
+		t.Fatalf("trace = %+v, want one entry", trace)
+	}
+	if trace[0].Lines != nil {
+		t.Errorf("Lines = %v, want none when the line count changed", trace[0].Lines)
+	}
+	// The two dropped blank lines leave nothing to point at, so the range
+	// collapses onto the line that now sits at the seam.
+	if trace[0].From != 3 || trace[0].To != 3 {
+		t.Errorf("range = %d-%d, want 3-3", trace[0].From, trace[0].To)
+	}
+}
+
+func TestEngine_FormatTrace_UnchangedRulesAbsent(t *testing.T) {
+	out, trace, err := defaultEngine(t).FormatTrace([]byte("Already formatted.\n"))
+	if err != nil {
+		t.Fatalf("FormatTrace: %v", err)
+	}
+	if string(out) != "Already formatted.\n" {
+		t.Errorf("output = %q, want it unchanged", out)
+	}
+	if len(trace) != 0 {
+		t.Errorf("trace = %+v, want it empty", trace)
+	}
+}
