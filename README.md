@@ -110,6 +110,8 @@ rules:
 options:
   semantic-line-breaks:
     break-on: [sentence] # add: colon, semicolon, em-dash, comma
+    abbreviations: [Abs, Hrsg] # added to the built-in English/German set
+    abbreviations-replace: false # true uses only the list above
   atx-headings:
     strip-trailing-punctuation: ".,;:!?" # "" keeps heading punctuation
   code-fence-style:

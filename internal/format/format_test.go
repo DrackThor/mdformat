@@ -223,6 +223,68 @@ func TestSemBr_ConfigurableBreakOn(t *testing.T) {
 	}
 }
 
+func TestSemBr_Abbreviations(t *testing.T) {
+	tests := []struct {
+		name    string
+		extra   []string
+		replace bool
+		input   string
+		want    string
+	}{
+		{
+			name:  "german abbreviations are built in",
+			input: "Preise inkl. MwSt. und ggf. Versand, z.B. per Post. Ende.\n",
+			want:  "Preise inkl. MwSt. und ggf. Versand, z.B. per Post.\nEnde.\n",
+		},
+		{
+			name:  "non-ascii abbreviation is built in",
+			input: "Nimm Milch o.ä. mit. Fertig.\n",
+			want:  "Nimm Milch o.ä. mit.\nFertig.\n",
+		},
+		{
+			name:  "unknown abbreviation still ends a sentence",
+			input: "Siehe Hrsg. Mueller dazu.\n",
+			want:  "Siehe Hrsg.\nMueller dazu.\n",
+		},
+		{
+			name:  "configured abbreviation is added to the defaults",
+			extra: []string{"Hrsg."},
+			input: "Siehe Hrsg. Mueller dazu. Mehr etc. dazu. Ende.\n",
+			want:  "Siehe Hrsg. Mueller dazu.\nMehr etc. dazu.\nEnde.\n",
+		},
+		{
+			name:    "replace drops the built-in set",
+			extra:   []string{"Hrsg"},
+			replace: true,
+			input:   "Siehe Hrsg. Mueller und etc. mehr.\n",
+			want:    "Siehe Hrsg. Mueller und etc.\nmehr.\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := viper.New()
+			v.Set("rules", []string{"semantic-line-breaks"})
+			if tt.extra != nil {
+				v.Set("options.semantic-line-breaks.abbreviations", tt.extra)
+			}
+			if tt.replace {
+				v.Set("options.semantic-line-breaks.abbreviations-replace", true)
+			}
+			e, err := Build(v)
+			if err != nil {
+				t.Fatalf("Build: %v", err)
+			}
+			out, err := e.Format([]byte(tt.input))
+			if err != nil {
+				t.Fatalf("Format: %v", err)
+			}
+			if string(out) != tt.want {
+				t.Errorf("\n got: %q\nwant: %q", out, tt.want)
+			}
+		})
+	}
+}
+
 func TestOrderedListNumbering_Styles(t *testing.T) {
 	const in = "3. first\n7. second\n8. third\n"
 	tests := []struct {

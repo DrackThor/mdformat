@@ -2,6 +2,8 @@ First sentence. Second sentence! Third one? Done.
 
 Version v1.2.3 and e.g. abbreviations do not split. Mr. Smith neither.
 
+Preise inkl. MwSt. und ggf. Versand, z.B. per Post oder o.ä. Das ist alles. Danach folgt mehr.
+
 This paragraph was hard wrapped at a fixed
 width and should be stitched back
 into one logical line.
