@@ -33,6 +33,19 @@ options:
     break-on:
       - sentence
 
+    # Words whose trailing dot never ends a sentence. These are added to the
+    # built-in set (English and German: e.g., etc., z.B., inkl., ggf., ...).
+    # Case and surrounding dots are ignored, so "Abs.", "abs" and "ABS." are
+    # the same entry.
+    abbreviations:
+      - Abs
+      - Art
+      - Hrsg
+
+    # Set to true to use only the "abbreviations" above and drop the built-in
+    # set entirely. Default: false (the lists are merged).
+    abbreviations-replace: false
+
   table-width:
     # Pad each cell to the column's widest cell content plus this many spaces.
     padding: 1

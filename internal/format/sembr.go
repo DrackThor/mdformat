@@ -35,6 +35,11 @@ func init() { Register(nameSemBr, newSemBr) }
 //	comma      after ,
 type semBr struct {
 	sentence, colon, semicolon, emDash, comma bool
+
+	// abbrevs holds the words that a '.' may follow without ending a sentence,
+	// keyed as sentenceDot looks them up: lower case, outer dots trimmed
+	// ("z.B." is stored as "z.b").
+	abbrevs map[string]bool
 }
 
 func newSemBr(opts *viper.Viper) (Rule, error) {
@@ -57,7 +62,42 @@ func newSemBr(opts *viper.Viper) (Rule, error) {
 			r.comma = true
 		}
 	}
+	r.abbrevs = buildAbbreviations(opts)
 	return r, nil
+}
+
+// buildAbbreviations merges the configured "abbreviations" into the built-in
+// set, or replaces it when "abbreviations-replace" is true.
+func buildAbbreviations(opts *viper.Viper) map[string]bool {
+	extra := []string{}
+	replace := false
+	if opts != nil {
+		if opts.IsSet("abbreviations") {
+			extra = opts.GetStringSlice("abbreviations")
+		}
+		if opts.IsSet("abbreviations-replace") {
+			replace = opts.GetBool("abbreviations-replace")
+		}
+	}
+	out := make(map[string]bool, len(defaultAbbreviations)+len(extra))
+	if !replace {
+		for w := range defaultAbbreviations {
+			out[w] = true
+		}
+	}
+	for _, w := range extra {
+		if key := abbreviationKey(w); key != "" {
+			out[key] = true
+		}
+	}
+	return out
+}
+
+// abbreviationKey normalizes a configured abbreviation to the form sentenceDot
+// looks up: lower case and without the outer dots, so "Z.B.", "z.B" and "z.b."
+// all become "z.b".
+func abbreviationKey(word string) string {
+	return strings.Trim(strings.ToLower(strings.TrimSpace(word)), ".")
 }
 
 func (semBr) Name() string { return nameSemBr }
@@ -218,7 +258,7 @@ func (r semBr) breakAt(content string, i int, prot []bool) (width int, ok bool) 
 		if !r.sentence {
 			return 0, false
 		}
-		if content[i] == '.' && !sentenceDot(content, i) {
+		if content[i] == '.' && !r.sentenceDot(content, i) {
 			return 0, false
 		}
 		return 1, true
@@ -254,7 +294,7 @@ func isCloser(c byte) bool {
 
 // sentenceDot reports whether the '.' at index i ends a sentence rather than
 // being a decimal point, ellipsis, initial, or known abbreviation.
-func sentenceDot(content string, i int) bool {
+func (r semBr) sentenceDot(content string, i int) bool {
 	if i > 0 && content[i-1] == '.' { // part of "..."
 		return false
 	}
@@ -273,16 +313,31 @@ func sentenceDot(content string, i int) bool {
 	if len(word) == 1 && content[j] >= 'A' && content[j] <= 'Z' {
 		return false // single-letter initial, e.g. "J. Smith"
 	}
-	return !abbreviations[word]
+	return !r.abbrevs[word]
 }
 
+// isLetter reports whether c may be part of a word. Bytes outside ASCII are
+// counted as letters so non-ASCII abbreviations such as "o.ä." scan as one word.
 func isLetter(c byte) bool {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c >= 0x80
 }
 
-var abbreviations = map[string]bool{
+// defaultAbbreviations is the built-in set of words that do not end a sentence
+// when followed by a '.'. Keys are lower case and carry no outer dots.
+// Configuration adds to this set (or replaces it) via buildAbbreviations.
+var defaultAbbreviations = map[string]bool{
+	// English
 	"e.g": true, "i.e": true, "etc": true, "vs": true, "cf": true, "al": true,
 	"mr": true, "mrs": true, "ms": true, "dr": true, "prof": true, "st": true,
 	"jr": true, "sr": true, "inc": true, "ltd": true, "co": true, "no": true,
 	"vol": true, "fig": true, "eq": true, "approx": true, "sec": true, "min": true,
+	// German
+	"inkl": true, "exkl": true, "zzgl": true, "abzgl": true, "ggf": true,
+	"bzw": true, "ca": true, "vgl": true, "usw": true, "bspw": true,
+	"evtl": true, "mind": true, "max": true, "sog": true, "ggfs": true,
+	"z.b": true, "d.h": true, "u.a": true, "o.ä": true, "s.o": true,
+	"s.u": true, "u.ä": true, "i.d.r": true, "z.t": true, "v.a": true,
+	"nr": true, "abb": true, "tab": true, "kap": true, "bzgl": true,
+	"jh": true, "mio": true, "mrd": true, "tsd": true, "hr": true, "fr": true,
+	"mwst": true, "str": true, "u.u": true, "i.a": true, "m.e": true,
 }

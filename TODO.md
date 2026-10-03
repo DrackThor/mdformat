@@ -223,6 +223,31 @@ next
 Implementation: `surroundBlocks` in `whitespace.go` — add a list-block edge detector alongside `isHeadingLine`/`isFenceEdge`.
 Careful with tight vs. loose lists.
 
+### 19. `semantic-line-breaks` — configurable abbreviations [rule] — DONE
+
+Implemented in `internal/format/sembr.go`: `defaultAbbreviations` carries the English and German set, `buildAbbreviations` merges the `abbreviations` option into it (or replaces it with `abbreviations-replace: true`), and `sentenceDot` is now a `semBr` method reading the rule's own map.
+`isLetter` also accepts non-ASCII bytes so `o.ä.` scans as one word.
+
+German (and other) abbreviations must not end a sentence: `inkl.`, `etc.`, `z.B.`, `ggf.`, `bzw.`, `u.a.`, `ca.`, `vgl.`, `Nr.`, `Abb.`, `s.o.`, `d.h.`.
+Today `abbreviations` in `sembr.go` is a hard-coded English-only `map[string]bool`, so `z.B.` splits a line mid-sentence.
+
+Two parts:
+
+- Extend the built-in default set with the common German abbreviations.
+- Make the set configurable per rule, so users can add their own without patching the binary.
+
+Option sketch on the `semantic-line-breaks` rule:
+
+```yaml
+semantic-line-breaks:
+  abbreviations: ["inkl", "ggf", "zzgl"]   # merged into the defaults
+  abbreviations-replace: false             # true = replace the defaults instead
+```
+
+Implementation: `sentenceDot` already lowercases and strips dots from the preceding word, so multi-dot forms like `z.B.` land as the lookup key `z.b` — store the config entries the same way (lowercase, dots trimmed at the edges).
+Read the option in `newSemBr` and build the rule's own map instead of using the package-level `abbreviations` var.
+Add table-driven cases for a default German abbreviation and a user-supplied one, plus a fixture line in `test-cases/inputs/semantic-line-breaks.md`.
+
 ______________________________________________________________________
 
 ## Tier 2 — inline normalization (needs an inline tokenizer)
@@ -413,7 +438,7 @@ ______________________________________________________________________
 
 ## Suggested order of attack
 
-1. Tier 1 (#1–#4 and #6 done, #5 marker part done) — pure line transforms, reuse existing helpers, high user value.
+1. Tier 1 (#1–#4, #6 and #19 done, #5 marker part done) — pure line transforms, reuse existing helpers, high user value.
 2. #16 TOML config + #13 end-of-line + #14 diff/stdin — cheap CLI parity wins.
 3. Build the shared inline tokenizer, then Tier 2 (#7–#11).
 4. #17 safety guard once several inline rules exist (highest risk of meaning changes).
